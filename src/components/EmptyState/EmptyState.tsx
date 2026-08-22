@@ -1,31 +1,53 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Film,
   FolderOpen,
+  FolderPlus,
   Subtitles,
   Settings,
   Keyboard,
   Play,
+  Clock,
   Shield,
-  Layers
+  Layers,
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { PlaylistItem } from '../../types';
+import { WatchHistoryItem } from '../../shared/types';
+import {
+  isElectron,
+  openNativeVideoFiles,
+  openNativeFolder,
+  fetchWatchHistory,
+  clearWatchHistory
+} from '../../services/electronService';
+import { formatTime } from '../../utils/formatTime';
 
 interface EmptyStateProps {
   onOpenFiles: (files: FileList) => void;
-  onSelectSample?: (video: PlaylistItem) => void;
+  onSelectPlaylistItem?: (video: PlaylistItem) => void;
+  onAddPlaylistItems?: (items: PlaylistItem[]) => void;
   onOpenSettings: () => void;
   onOpenShortcuts: () => void;
+  onSelectSample?: (video: PlaylistItem) => void;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   onOpenFiles,
+  onAddPlaylistItems,
   onOpenSettings,
   onOpenShortcuts
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const subtitleInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [watchHistory, setWatchHistory] = useState<WatchHistoryItem[]>([]);
+  const electronAvailable = isElectron();
+
+  useEffect(() => {
+    fetchWatchHistory().then(setWatchHistory);
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -49,6 +71,55 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     if (e.target.files && e.target.files.length > 0) {
       onOpenFiles(e.target.files);
     }
+  };
+
+  const handleNativeOpenVideo = async () => {
+    if (electronAvailable) {
+      const items = await openNativeVideoFiles();
+      if (items.length > 0 && onAddPlaylistItems) {
+        onAddPlaylistItems(items);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleNativeOpenFolder = async () => {
+    if (electronAvailable) {
+      const result = await openNativeFolder();
+      if (result.items.length > 0 && onAddPlaylistItems) {
+        onAddPlaylistItems(result.items);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleResumeHistoryItem = (item: WatchHistoryItem) => {
+    if (onAddPlaylistItems) {
+      const isMkv = item.filePath.toLowerCase().endsWith('.mkv');
+      const playlistItem: PlaylistItem = {
+        id: `wh_${item.id}`,
+        title: item.title,
+        url: item.filePath.startsWith('http') ? item.filePath : `media://${encodeURI(item.filePath.replace(/\\/g, '/'))}`,
+        dateAdded: item.lastPlayed,
+        duration: item.duration,
+        lastPosition: item.position,
+        metadata: {
+          filename: item.title,
+          fileSize: item.fileSize,
+          videoType: isMkv ? 'video/x-matroska (MKV Container)' : 'video/mp4'
+        },
+        subtitleTracks: [],
+        selectedSubtitleTrackId: null
+      };
+      onAddPlaylistItems([playlistItem]);
+    }
+  };
+
+  const handleClearHistory = async () => {
+    await clearWatchHistory();
+    setWatchHistory([]);
   };
 
   return (
@@ -75,10 +146,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 CINE MEDIA PLAYER
               </h1>
               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 uppercase tracking-widest">
-                EXTENSION
+                {electronAvailable ? 'DESKTOP' : 'CORE'}
               </span>
             </div>
-            <p className="text-xs text-gray-400">Desktop-grade local media playback</p>
+            <p className="text-xs text-gray-400">Native desktop local media player</p>
           </div>
         </div>
 
@@ -105,9 +176,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </header>
 
       {/* Main Drag & Drop / Open File Hero Card */}
-      <main className="relative z-10 w-full max-w-4xl mx-auto my-auto py-8">
+      <main className="relative z-10 w-full max-w-4xl mx-auto my-auto py-6">
         <div
-          className={`relative rounded-3xl p-8 sm:p-12 text-center transition-all duration-200 border-2 ${
+          className={`relative rounded-3xl p-8 sm:p-10 text-center transition-all duration-200 border-2 ${
             isDragOver
               ? 'border-cyan-400 bg-cyan-950/30 scale-[1.01] shadow-2xl shadow-cyan-500/20'
               : 'border-white/10 bg-[#101114]/90 glass-panel shadow-2xl'
@@ -119,39 +190,51 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
-            Open Video or Movie File
+            Open Video or Media File
           </h2>
-          <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed mb-8">
-            Drag and drop any local video file here, or select files directly from your computer for smooth client-side playback.
+          <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed mb-6">
+            Drag and drop local video files here, browse files from your computer, or load an entire media folder into your library.
           </p>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3.5 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleNativeOpenVideo}
               className="px-6 py-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm tracking-wide transition-all shadow-xl shadow-cyan-500/25 hover:scale-105 active:scale-95 flex items-center gap-2"
             >
               <FolderOpen className="w-4 h-4" />
-              <span>Browse Local Video</span>
+              <span>Open Video File</span>
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="video/*,.mkv,.mp4,.webm,.mov,.m4v,.ogv,.avi"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
+
+            {electronAvailable && (
+              <button
+                type="button"
+                onClick={handleNativeOpenFolder}
+                className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-gray-200 hover:text-white font-semibold text-sm transition-all border border-white/10 flex items-center gap-2 active:scale-95 shadow-lg"
+              >
+                <FolderPlus className="w-4 h-4 text-cyan-400" />
+                <span>Open Folder / Library</span>
+              </button>
+            )}
 
             <button
               type="button"
               onClick={() => subtitleInputRef.current?.click()}
-              className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-gray-200 hover:text-white font-semibold text-sm transition-all border border-white/10 flex items-center gap-2 active:scale-95"
+              className="px-5 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-medium text-sm transition-all border border-white/10 flex items-center gap-2 active:scale-95"
             >
               <Subtitles className="w-4 h-4 text-cyan-400" />
               <span>Load Subtitles (.srt / .vtt / .ass)</span>
             </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="video/*,.mkv,.mp4,.webm,.mov,.m4v,.ogv,.avi,.ts"
+              onChange={handleFileInputChange}
+              className="hidden"
+            />
             <input
               ref={subtitleInputRef}
               type="file"
@@ -164,7 +247,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           {/* Format Badges */}
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-400">
             <span className="text-gray-500 font-medium">Supported Formats:</span>
-            {['MKV (Matroska)', 'MP4 (H.264 / AV1)', 'WebM (VP9)', 'MOV', 'M4V', 'Embedded Subs (SRT/ASS)'].map((fmt) => (
+            {['MKV', 'MP4', 'WebM', 'MOV', 'AVI', 'M4V', 'TS', 'Embedded Subs (SRT/ASS)'].map((fmt) => (
               <span
                 key={fmt}
                 className="px-2.5 py-0.5 rounded-lg bg-black/40 border border-white/5 font-mono-time text-[11px] text-cyan-300"
@@ -174,23 +257,90 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             ))}
           </div>
         </div>
+
+        {/* Continue Watching / Recent Videos Section */}
+        {watchHistory.length > 0 && (
+          <div className="mt-8 bg-[#101114]/90 border border-white/10 rounded-2xl p-5 shadow-xl">
+            <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-bold text-white tracking-wide">Continue Watching & Recent</h3>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400 font-mono-time">
+                  {watchHistory.length}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearHistory}
+                className="text-xs text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1"
+                title="Clear history"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Clear History</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {watchHistory.slice(0, 6).map((item) => {
+                const percent = item.duration > 0 ? Math.min(100, (item.position / item.duration) * 100) : 0;
+                return (
+                  <div
+                    key={item.id || item.filePath}
+                    onClick={() => handleResumeHistoryItem(item)}
+                    className="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-cyan-500/40 cursor-pointer transition-all flex flex-col justify-between gap-2 group"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className="p-2 rounded-lg bg-black/50 border border-white/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black transition-colors shrink-0">
+                        <Play className="w-4 h-4 fill-current" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-semibold text-white truncate group-hover:text-cyan-300 transition-colors">
+                          {item.title}
+                        </h4>
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          {item.completed ? (
+                            <span className="text-green-400">Completed</span>
+                          ) : (
+                            <span>
+                              {formatTime(item.position)} / {formatTime(item.duration)}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Mini Progress Bar */}
+                    <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          item.completed ? 'bg-green-500' : 'bg-cyan-400'
+                        }`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer Features Bar */}
-      <footer className="relative z-10 w-full max-w-6xl mx-auto pt-6 border-t border-white/5 flex flex-wrap items-center justify-between gap-4 text-xs text-gray-400">
+      <footer className="relative z-10 w-full max-w-6xl mx-auto pt-4 border-t border-white/5 flex flex-wrap items-center justify-between gap-4 text-xs text-gray-400">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-green-400" />
-            <span>Zero Data Uploads • 100% Private</span>
+            <span>Zero Data Uploads • 100% Local Filesystem</span>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <Layers className="w-4 h-4 text-cyan-400" />
-            <span>Cine Media Audio Boost & Multi-Track SRT</span>
+            <span>Hardware Accelerated Playback & Power Saver</span>
           </div>
         </div>
 
         <div className="text-[11px] text-gray-500 font-mono-time">
-          Cine Media WebExtension Core • Chrome & Firefox Compatible
+          Cine Desktop Media Engine • Windows, macOS & Linux
         </div>
       </footer>
     </div>

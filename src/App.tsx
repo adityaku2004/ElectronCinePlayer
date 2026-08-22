@@ -24,6 +24,15 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcuts/KeyboardShortcutsModal';
 import { AudioEqualizerModal } from './components/AudioEffects/AudioEqualizerModal';
 import { Toast } from './components/Common/Toast';
+import { TitleBar } from './components/TitleBar/TitleBar';
+import {
+  isElectron,
+  openNativeVideoFiles,
+  openNativeFolder,
+  getSingleFileInfo,
+  recordWatchHistory,
+  setPowerPlaying
+} from './services/electronService';
 
 const DEFAULT_PLAYER_SETTINGS: PlayerSettings = {
   defaultSpeed: 1.0,
@@ -391,8 +400,125 @@ export default function App() {
     [currentVideo, showToast]
   );
 
+  // Add native playlist items (from Native File dialog, Folder picker, or OS File Open)
+  const handleAddNativePlaylistItems = useCallback(
+    (items: PlaylistItem[]) => {
+      if (!items || items.length === 0) return;
+      setPlaylist((prev) => [...items, ...prev]);
+      setCurrentVideo(items[0]);
+      showToast(`Added ${items.length} file${items.length > 1 ? 's' : ''} to playlist`);
+    },
+    [showToast]
+  );
+
+  // Handle native file double-click or CLI opening from Electron
+  useEffect(() => {
+    if (!isElectron() || !window.electronAPI) return;
+
+    // Listen for files opened via OS association or CLI
+    const cleanupFileOpened = window.electronAPI.onFileOpened(async (files) => {
+      if (!files) return;
+      const paths = Array.isArray(files) ? files : [files];
+      const newItems: PlaylistItem[] = [];
+
+      for (const p of paths) {
+        if (typeof p === 'string' && p.trim()) {
+          const item = await getSingleFileInfo(p);
+          if (item) {
+            newItems.push(item);
+          }
+        }
+      }
+
+      if (newItems.length > 0) {
+        setPlaylist((prev) => [...newItems, ...prev]);
+        setCurrentVideo(newItems[0]);
+        showToast(`Opened: ${newItems[0].title}`);
+      }
+    });
+
+    // Listen for native application menu actions
+    const cleanupMenu = window.electronAPI.onMenuAction(async (action) => {
+      switch (action) {
+        case 'open-file': {
+          const files = await openNativeVideoFiles();
+          if (files.length > 0) {
+            handleAddNativePlaylistItems(files);
+          }
+          break;
+        }
+        case 'open-folder': {
+          const res = await openNativeFolder();
+          if (res.items.length > 0) {
+            handleAddNativePlaylistItems(res.items);
+          }
+          break;
+        }
+        case 'next':
+          handleNextVideo();
+          break;
+        case 'prev':
+          handlePrevVideo();
+          break;
+        case 'open-settings':
+          setIsSettingsOpen(true);
+          break;
+        case 'open-shortcuts':
+          setIsShortcutsOpen(true);
+          break;
+        case 'open-equalizer':
+          setIsEqualizerOpen(true);
+          break;
+        case 'open-playlist':
+          handleOpenPlaylistPanel();
+          break;
+        case 'open-bookmarks':
+          handleOpenBookmarksPanel();
+          break;
+        case 'about':
+          setIsSettingsOpen(true);
+          break;
+        default:
+          break;
+      }
+    });
+
+    return () => {
+      cleanupFileOpened();
+      cleanupMenu();
+    };
+  }, [
+    handleAddNativePlaylistItems,
+    handleNextVideo,
+    handlePrevVideo,
+    handleOpenPlaylistPanel,
+    handleOpenBookmarksPanel,
+    showToast
+  ]);
+
+  // Sync watch history and display sleep blocker when video playback is active
+  useEffect(() => {
+    if (currentVideo && currentPlaybackTime > 0) {
+      const isCompleted = currentPlaybackDuration > 0 && currentPlaybackTime / currentPlaybackDuration >= 0.9;
+      recordWatchHistory({
+        filePath: currentVideo.originalFile?.name || currentVideo.url,
+        title: currentVideo.title,
+        position: currentPlaybackTime,
+        duration: currentPlaybackDuration,
+        completed: isCompleted
+      }).catch(() => {});
+    }
+  }, [currentVideo, currentPlaybackTime, currentPlaybackDuration]);
+
   return (
     <div className="w-full h-screen bg-[#050505] text-white flex flex-col font-sans overflow-hidden select-none">
+      {/* Native Desktop Title Bar with Window Controls & Status */}
+      <TitleBar
+        title={currentVideo ? currentVideo.title : 'Desktop Media Engine'}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+      />
+
       {/* Toast Overlay */}
       <Toast toasts={toasts} onDismiss={dismissToast} />
 
@@ -400,6 +526,7 @@ export default function App() {
       {!currentVideo ? (
         <EmptyState
           onOpenFiles={handleOpenLocalFiles}
+          onAddPlaylistItems={handleAddNativePlaylistItems}
           onOpenSettings={() => setIsSettingsOpen(true)}
           onOpenShortcuts={() => setIsShortcutsOpen(true)}
         />
@@ -473,6 +600,7 @@ export default function App() {
         onRenameVideo={handleRenamePlaylistItem}
         onReorderPlaylist={handleReorderPlaylist}
         onAddLocalFiles={handleOpenLocalFiles}
+        onAddPlaylistItems={handleAddNativePlaylistItems}
         onAddSampleVideos={handleAddSampleVideos}
         onClearPlaylist={handleClearPlaylist}
         onAddBookmark={handleAddBookmark}

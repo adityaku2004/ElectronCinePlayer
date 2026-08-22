@@ -1,6 +1,6 @@
 {
   "name": "Electron CineVLC React Player",
-  "description": "A premium browser extension for playing local videos with a cinematic UI, advanced controls, and VLC-like functionality.",
+  "description": "Cross-platform desktop media player built with Electron, React, and TypeScript featuring native OS dialogs, folder library streaming via custom media:// protocol, hardware display power sleep prevention, and VLC-like controls.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

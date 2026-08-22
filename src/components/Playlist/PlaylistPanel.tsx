@@ -1,9 +1,30 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ListVideo, Bookmark, X, Plus, Trash2, Sparkles, FolderPlus, Search } from 'lucide-react';
+import {
+  ListVideo,
+  Bookmark,
+  X,
+  Plus,
+  Trash2,
+  Sparkles,
+  FolderPlus,
+  Folder,
+  RefreshCw,
+  Search,
+  HardDrive
+} from 'lucide-react';
 import { PlaylistItem as PlaylistItemType, VideoBookmark } from '../../types';
+import { LibraryFolder } from '../../shared/types';
 import { PlaylistItem } from './PlaylistItem';
 import { BookmarksList } from '../Bookmarks/BookmarksList';
+import {
+  isElectron,
+  openNativeVideoFiles,
+  openNativeFolder,
+  fetchLibraryFolders,
+  removeLibraryFolder,
+  scanLibraryFolder
+} from '../../services/electronService';
 
 interface PlaylistPanelProps {
   isOpen: boolean;
@@ -13,12 +34,13 @@ interface PlaylistPanelProps {
   currentTime?: number;
   duration?: number;
   bookmarks?: VideoBookmark[];
-  initialTab?: 'playlist' | 'bookmarks';
+  initialTab?: 'playlist' | 'bookmarks' | 'library';
   onSelectVideo: (video: PlaylistItemType) => void;
   onRemoveVideo: (id: string) => void;
   onRenameVideo: (id: string, newTitle: string) => void;
   onReorderPlaylist: (fromIndex: number, toIndex: number) => void;
   onAddLocalFiles: (files: FileList) => void;
+  onAddPlaylistItems?: (items: PlaylistItemType[]) => void;
   onAddSampleVideos: () => void;
   onClearPlaylist: () => void;
   onSeek?: (time: number) => void;
@@ -43,6 +65,7 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
   onRenameVideo,
   onReorderPlaylist,
   onAddLocalFiles,
+  onAddPlaylistItems,
   onAddSampleVideos,
   onClearPlaylist,
   onSeek = () => {},
@@ -52,9 +75,12 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
   onClearBookmarks = () => {},
   onShowToast
 }) => {
-  const [activeTab, setActiveTab] = useState<'playlist' | 'bookmarks'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'playlist' | 'bookmarks' | 'library'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [libraryFolders, setLibraryFolders] = useState<LibraryFolder[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const electronAvailable = isElectron();
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -62,12 +88,72 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
     }
   }, [isOpen, initialTab]);
 
+  useEffect(() => {
+    if (isOpen) {
+      fetchLibraryFolders().then(setLibraryFolders);
+    }
+  }, [isOpen]);
+
   const currentVideo = playlist.find((v) => v.id === currentVideoId) || null;
   const currentVideoBookmarks = bookmarks.filter((bm) => currentVideo && bm.videoId === currentVideo.id);
 
   const filteredPlaylist = playlist.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
+
+  const handleAddVideosClick = async () => {
+    if (electronAvailable) {
+      const items = await openNativeVideoFiles();
+      if (items.length > 0) {
+        if (onAddPlaylistItems) {
+          onAddPlaylistItems(items);
+        }
+        onShowToast?.(`Added ${items.length} videos to playlist`);
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleAddLibraryFolder = async () => {
+    if (electronAvailable) {
+      const result = await openNativeFolder();
+      if (result.folder) {
+        const folders = await fetchLibraryFolders();
+        setLibraryFolders(folders);
+        if (result.items.length > 0 && onAddPlaylistItems) {
+          onAddPlaylistItems(result.items);
+          onShowToast?.(`Added folder "${result.folder.name}" with ${result.items.length} media files`);
+        }
+      }
+    } else {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleRescanFolder = async (folder: LibraryFolder) => {
+    setIsScanning(true);
+    try {
+      const items = await scanLibraryFolder(folder.path);
+      if (items.length > 0 && onAddPlaylistItems) {
+        onAddPlaylistItems(items);
+        onShowToast?.(`Scanned ${items.length} media files from "${folder.name}"`);
+      } else {
+        onShowToast?.(`No media files found in "${folder.name}"`);
+      }
+    } catch {
+      onShowToast?.('Failed to scan folder');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const handleRemoveFolder = async (folderId: string) => {
+    await removeLibraryFolder(folderId);
+    const updated = await fetchLibraryFolders();
+    setLibraryFolders(updated);
+    onShowToast?.('Folder removed from library');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -97,16 +183,16 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-            className="fixed top-0 right-0 bottom-0 w-full sm:w-96 bg-[#101114]/95 border-l border-white/10 shadow-2xl z-50 flex flex-col backdrop-blur-2xl"
+            className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-[#101114]/95 border-l border-white/10 shadow-2xl z-50 flex flex-col backdrop-blur-2xl"
           >
             {/* Header & Tabs */}
-            <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-[#14161c]">
+            <div className="p-3 border-b border-white/10 flex items-center justify-between bg-[#14161c]">
               {/* Tab Selector */}
-              <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/10 gap-1">
+              <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/10 gap-1 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab('playlist')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                     activeTab === 'playlist'
                       ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                       : 'text-gray-400 hover:text-white'
@@ -119,14 +205,27 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => setActiveTab('bookmarks')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
                     activeTab === 'bookmarks'
                       ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                       : 'text-gray-400 hover:text-white'
                   }`}
                 >
                   <Bookmark className="w-3.5 h-3.5" />
-                  <span>Bookmarks ({currentVideoBookmarks.length})</span>
+                  <span>Marks ({currentVideoBookmarks.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('library')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
+                    activeTab === 'library'
+                      ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <HardDrive className="w-3.5 h-3.5" />
+                  <span>Library ({libraryFolders.length})</span>
                 </button>
               </div>
 
@@ -159,11 +258,11 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
                 <div className="p-3 bg-[#181a20]/60 border-b border-white/5 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={handleAddVideosClick}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold transition-all shadow-md shadow-cyan-500/20 active:scale-98"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Video Files</span>
+                    <span>Add Videos</span>
                   </button>
                   <input
                     ref={fileInputRef}
@@ -185,7 +284,7 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
                   </button>
                 </div>
 
-                {/* Search Bar (visible when playlist has items) */}
+                {/* Search Bar */}
                 {playlist.length > 0 && (
                   <div className="px-3 pt-2.5 pb-1 border-b border-white/5 bg-[#121419]">
                     <div className="relative flex items-center">
@@ -240,7 +339,7 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
                       <div className="mt-4 flex flex-col gap-2 w-full max-w-xs">
                         <button
                           type="button"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={handleAddVideosClick}
                           className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold transition-colors flex items-center justify-center gap-2"
                         >
                           <FolderPlus className="w-4 h-4" />
@@ -319,6 +418,106 @@ export const PlaylistPanel: React.FC<PlaylistPanelProps> = ({
                 onSelectVideo={onSelectVideo}
                 onShowToast={onShowToast}
               />
+            )}
+
+            {/* Tab 3: Media Library & Folders */}
+            {activeTab === 'library' && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="p-3 bg-[#181a20]/60 border-b border-white/5 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                      Media Library Folders
+                    </h4>
+                    <p className="text-[11px] text-gray-400">
+                      Persistent desktop media directories
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddLibraryFolder}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-semibold transition-all shadow-md shadow-cyan-500/20 active:scale-98"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>Add Folder</span>
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {libraryFolders.length === 0 ? (
+                    <div className="h-full min-h-[220px] flex flex-col items-center justify-center text-center p-6 bg-white/[0.02] border border-dashed border-white/10 rounded-2xl">
+                      <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-3">
+                        <Folder className="w-6 h-6 text-gray-500" />
+                      </div>
+                      <h4 className="text-sm font-semibold text-white">No Library Folders</h4>
+                      <p className="text-xs text-gray-400 mt-1 max-w-xs leading-relaxed">
+                        Add folders containing your movies or series to quickly access and play them anytime.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleAddLibraryFolder}
+                        className="mt-4 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold transition-colors flex items-center gap-2"
+                      >
+                        <FolderPlus className="w-4 h-4" />
+                        Select Folder on Disk
+                      </button>
+                    </div>
+                  ) : (
+                    libraryFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-500/40 transition-all flex flex-col gap-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shrink-0">
+                              <Folder className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <h5 className="text-xs font-bold text-white truncate">
+                                {folder.name}
+                              </h5>
+                              <p className="text-[10px] text-gray-400 font-mono mt-0.5 truncate max-w-[220px]" title={folder.path}>
+                                {folder.path}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleRescanFolder(folder)}
+                              disabled={isScanning}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-cyan-300 hover:bg-white/10 transition-colors"
+                              title="Rescan folder and add new videos to playlist"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFolder(folder.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-white/10 transition-colors"
+                              title="Remove folder from library"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] text-gray-400">
+                          <span>{folder.fileCount ? `${folder.fileCount} media files` : 'Folder indexed'}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRescanFolder(folder)}
+                            className="text-cyan-400 hover:text-cyan-300 font-semibold"
+                          >
+                            Load All to Queue &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </motion.div>
         </>

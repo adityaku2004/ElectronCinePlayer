@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sliders,
   Subtitles,
@@ -11,10 +11,16 @@ import {
   FastForward,
   Check,
   Minus,
-  Plus
+  Plus,
+  Monitor,
+  RefreshCw,
+  Pin,
+  Maximize2
 } from 'lucide-react';
 import { Modal } from '../Common/Modal';
 import { PlayerSettings, SubtitleSettings, SubtitleSize, SubtitlePosition, SubtitleFont, AspectRatioMode } from '../../types';
+import { AppInfo, UpdateStatus } from '../../shared/types';
+import { isElectron, setAlwaysOnTop, getAlwaysOnTop } from '../../services/electronService';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,7 +32,7 @@ interface SettingsModalProps {
   onResetDefaults: () => void;
 }
 
-type TabType = 'player' | 'subtitles' | 'appearance' | 'shortcuts' | 'extension';
+type TabType = 'player' | 'subtitles' | 'appearance' | 'shortcuts' | 'desktop' | 'extension';
 
 const ACCENT_PRESETS = [
   { name: 'Electric Cyan', value: '#00F0FF' },
@@ -46,6 +52,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetDefaults
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('player');
+  const [isAlwaysOnTopState, setIsAlwaysOnTopState] = useState(false);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+  useEffect(() => {
+    if (isElectron()) {
+      getAlwaysOnTop().then(setIsAlwaysOnTopState).catch(() => {});
+      window.electronAPI?.getAppInfo().then(setAppInfo).catch(() => {});
+    }
+  }, []);
+
+  const handleToggleAlwaysOnTop = async () => {
+    const next = !isAlwaysOnTopState;
+    setIsAlwaysOnTopState(next);
+    await setAlwaysOnTop(next);
+  };
+
+  const handleCheckForUpdates = async () => {
+    if (!window.electronAPI?.checkForUpdates) return;
+    setIsCheckingUpdate(true);
+    try {
+      const res = await window.electronAPI.checkForUpdates();
+      setUpdateStatus(res);
+    } catch {
+      setUpdateStatus({ status: 'error', error: 'Could not connect to update service' });
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   return (
     <Modal
@@ -95,6 +131,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         >
           <Palette className="w-3.5 h-3.5" />
           <span>Appearance</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('desktop')}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+            activeTab === 'desktop'
+              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Monitor className="w-3.5 h-3.5" />
+          <span>Desktop & Native</span>
         </button>
 
         <button
@@ -541,6 +590,107 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: DESKTOP & NATIVE */}
+      {activeTab === 'desktop' && (
+        <div className="space-y-4 text-xs">
+          {/* Always On Top */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+            <div>
+              <div className="font-semibold text-white flex items-center gap-1.5">
+                <Pin className="w-4 h-4 text-cyan-400" />
+                <span>Always On Top (Window Pinning)</span>
+              </div>
+              <div className="text-gray-400 text-[11px] mt-0.5">
+                Keeps the player floating above other applications on your desktop
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleAlwaysOnTop}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                isAlwaysOnTopState
+                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-sm shadow-cyan-500/30'
+                  : 'bg-white/10 text-gray-300 border-white/10 hover:bg-white/15'
+              }`}
+            >
+              {isAlwaysOnTopState ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+
+          {/* Native Hardware Power Display Block */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+            <div>
+              <div className="font-semibold text-white flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>Display Sleep Blocker (Power Save)</span>
+              </div>
+              <div className="text-gray-400 text-[11px] mt-0.5">
+                Automatically prevents screensavers and monitor sleep during video playback
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded text-[10px] font-bold uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              Active on Playback
+            </span>
+          </div>
+
+          {/* Software Updates */}
+          <div className="p-3.5 rounded-xl bg-white/5 border border-white/5 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-white flex items-center gap-1.5">
+                  <RefreshCw className={`w-4 h-4 text-cyan-400 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                  <span>Software Updates</span>
+                </div>
+                <div className="text-gray-400 text-[11px] mt-0.5">
+                  {updateStatus?.status === 'not-available'
+                    ? 'You are running the latest version of Cine Media Player.'
+                    : updateStatus?.status === 'available'
+                    ? `Update v${updateStatus.version} is ready for installation!`
+                    : updateStatus?.error
+                    ? updateStatus.error
+                    : 'Check for new releases and security patches'}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCheckForUpdates}
+                disabled={isCheckingUpdate}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/30 text-cyan-300 font-semibold transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingUpdate ? 'animate-spin' : ''}`} />
+                <span>{isCheckingUpdate ? 'Checking...' : 'Check Updates'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Runtime Architecture Specs */}
+          <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2">
+            <div className="text-gray-400 text-[10px] uppercase font-semibold tracking-wider">
+              Native Runtime Environment
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+              <div className="p-2 rounded bg-white/5 border border-white/5">
+                <span className="text-gray-400 block text-[10px]">App Version</span>
+                <span className="font-mono-time font-bold text-cyan-300">v{appInfo?.version || '2.4.0'}</span>
+              </div>
+              <div className="p-2 rounded bg-white/5 border border-white/5">
+                <span className="text-gray-400 block text-[10px]">Platform</span>
+                <span className="font-mono-time font-bold text-white uppercase">{appInfo?.platform || (typeof navigator !== 'undefined' ? navigator.platform : 'Native')}</span>
+              </div>
+              <div className="p-2 rounded bg-white/5 border border-white/5">
+                <span className="text-gray-400 block text-[10px]">Electron Engine</span>
+                <span className="font-mono-time font-bold text-white">{appInfo?.electronVersion ? `v${appInfo.electronVersion}` : '30.0.0'}</span>
+              </div>
+              <div className="p-2 rounded bg-white/5 border border-white/5">
+                <span className="text-gray-400 block text-[10px]">Chromium</span>
+                <span className="font-mono-time font-bold text-white">{appInfo?.chromeVersion ? `v${appInfo.chromeVersion}` : '124.0'}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
