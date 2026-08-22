@@ -12,6 +12,7 @@ import { parseSRT } from './utils/srtParser';
 import { parseVTT } from './utils/vttParser';
 import { parseASS } from './utils/assParser';
 import { extractMkvSubtitles, isMkvContainer } from './utils/mkvSubtitleParser';
+import { inspectMkvFile } from './utils/mkvInspector';
 import { cleanTitleFromFilename, generateId, isVideoFile, isSubtitleFile } from './utils/fileHelpers';
 import { formatTime } from './utils/formatTime';
 import { extensionStorage } from './utils/extensionStorage';
@@ -226,13 +227,22 @@ export default function App() {
           const objectUrl = URL.createObjectURL(file);
           const isMkv = await isMkvContainer(file);
           let embeddedSubs: SubtitleTrack[] = [];
+          let mkvResolution: string | undefined;
+          let mkvCodec: string | undefined;
 
           if (isMkv) {
             try {
               embeddedSubs = await extractMkvSubtitles(file);
               totalEmbeddedSubsFound += embeddedSubs.length;
+              const diag = await inspectMkvFile(file, file.name);
+              if (diag.videoTracks[0]?.width && diag.videoTracks[0]?.height) {
+                mkvResolution = `${diag.videoTracks[0].width}x${diag.videoTracks[0].height}`;
+              }
+              if (diag.primaryVideoCodec) {
+                mkvCodec = diag.primaryVideoCodec;
+              }
             } catch (e) {
-              console.warn('Error extracting MKV embedded subtitles:', e);
+              console.warn('Error extracting MKV embedded subtitles/metadata:', e);
             }
           }
 
@@ -247,6 +257,8 @@ export default function App() {
             metadata: {
               filename: file.name,
               fileSize: file.size,
+              resolution: mkvResolution,
+              codec: mkvCodec,
               videoType: isMkv ? 'video/x-matroska (MKV Container)' : (file.type || 'video/mp4')
             },
             subtitleTracks: combinedSubs,

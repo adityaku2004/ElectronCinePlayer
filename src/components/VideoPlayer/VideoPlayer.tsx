@@ -25,6 +25,10 @@ import { ResumePrompt } from '../ResumePrompt/ResumePrompt';
 import { ScreenshotNotification, ScreenshotNotificationData } from './ScreenshotNotification';
 import { captureVideoScreenshot } from '../../utils/screenshot';
 import { extensionStorage } from '../../utils/extensionStorage';
+import { AudioVisualizerOverlay } from './AudioVisualizerOverlay';
+import { MkvDiagnosticsModal } from './MkvDiagnosticsModal';
+import { inspectMkvFile, MkvDiagnosticReport } from '../../utils/mkvInspector';
+import { remuxMkvToMp4 } from '../../utils/mkvRemuxer';
 
 interface VideoPlayerProps {
   currentVideo: PlaylistItem | null;
@@ -92,6 +96,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   });
   const [screenshotData, setScreenshotData] = useState<ScreenshotNotificationData | null>(null);
   const [isFlashing, setIsFlashing] = useState(false);
+  const [diagnosticReport, setDiagnosticReport] = useState<MkvDiagnosticReport | null>(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [isRemuxing, setIsRemuxing] = useState(false);
+  const [remuxProgress, setRemuxProgress] = useState({ progress: 0, stage: '' });
 
   const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
 
@@ -107,6 +115,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     isBuffering,
     aspectRatio,
     setAspectRatio,
+    videoWidth,
+    videoHeight,
+    isAudioOnly,
     error,
     setError,
     activeCue,
@@ -124,6 +135,83 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     onVideoEnd: onNextVideo,
     onShowToast
   });
+
+  // Automatically inspect MKV tracks whenever a video is loaded
+  useEffect(() => {
+    if (!currentVideo) {
+      setDiagnosticReport(null);
+      return;
+    }
+
+    const filename = currentVideo.metadata?.filename || currentVideo.title || 'media.mkv';
+    const isMkv = filename.toLowerCase().endsWith('.mkv') || (currentVideo.metadata?.videoType && currentVideo.metadata.videoType.includes('matroska'));
+
+    if (currentVideo.originalFile) {
+      inspectMkvFile(currentVideo.originalFile, filename).then((rep) => {
+        setDiagnosticReport(rep);
+      });
+    } else if (isMkv && currentVideo.url) {
+      fetch(currentVideo.url)
+        .then((res) => res.blob())
+        .then((blob) => inspectMkvFile(blob, filename))
+        .then((rep) => setDiagnosticReport(rep))
+        .catch(() => {});
+    } else {
+      setDiagnosticReport(null);
+    }
+  }, [currentVideo]);
+
+  // Fast In-Browser MKV to MP4 Remuxer
+  const handleRemuxToMp4 = useCallback(async () => {
+    if (!currentVideo) return;
+    setIsRemuxing(true);
+    setRemuxProgress({ progress: 10, stage: 'Starting stream remux...' });
+
+    try {
+      let fileToRemux: Blob | File | null = currentVideo.originalFile || null;
+      if (!fileToRemux && currentVideo.url) {
+        setRemuxProgress({ progress: 20, stage: 'Reading media stream...' });
+        const res = await fetch(currentVideo.url);
+        fileToRemux = await res.blob();
+      }
+
+      if (!fileToRemux) {
+        throw new Error('Media file not accessible for remuxing');
+      }
+
+      const result = await remuxMkvToMp4(fileToRemux, (prog, stg) => {
+        setRemuxProgress({ progress: prog, stage: stg });
+      });
+
+      if (result.success && result.blobUrl) {
+        const savedCurrentTime = videoRef.current?.currentTime || 0;
+
+        // Update video element source directly to the remuxed MP4 stream
+        if (videoRef.current) {
+          videoRef.current.src = result.blobUrl;
+          videoRef.current.load();
+          videoRef.current.currentTime = savedCurrentTime;
+          videoRef.current.play().catch(() => {});
+        }
+
+        // Re-inspect newly remuxed report
+        if (result.blob) {
+          inspectMkvFile(result.blob, currentVideo.metadata?.filename || 'video.mp4').then((r) => {
+            setDiagnosticReport(r);
+          });
+        }
+
+        onShowToast('Video stream converted to MP4! Playing now.');
+      } else {
+        throw new Error(result.error || 'Remuxing failed');
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to remux stream';
+      onShowToast(`Remux note: ${errMsg}`);
+    } finally {
+      setIsRemuxing(false);
+    }
+  }, [currentVideo, onShowToast, videoRef]);
 
   // Keep parent in sync with active playback time & duration
   useEffect(() => {
@@ -307,6 +395,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         className="w-full h-full max-h-screen transition-all duration-200"
       />
 
+      {/* Audio Visualizer Overlay (When video is not rendered in MKV or audio-only mode) */}
+      <AudioVisualizerOverlay
+        currentVideo={currentVideo}
+        isPlaying={isPlaying}
+        isAudioOnly={isAudioOnly}
+        videoWidth={videoWidth}
+        videoHeight={videoHeight}
+        diagnosticReport={diagnosticReport}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        onTriggerFastRemux={handleRemuxToMp4}
+        isRemuxing={isRemuxing}
+      />
+
       {/* Shutter Flash Animation */}
       {isFlashing && (
         <div className="absolute inset-0 z-50 bg-white pointer-events-none transition-opacity duration-200" />
@@ -425,6 +526,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           playlistCount={playlist.length}
           bookmarkCount={currentVideoBookmarks.length}
           onTakeScreenshot={handleTakeScreenshot}
+          onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+          isMkv={Boolean(diagnosticReport?.isMkv || currentVideo?.metadata?.filename?.toLowerCase().endsWith('.mkv'))}
         />
       </div>
 
@@ -506,6 +609,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onAddBookmark={handleQuickAddBookmark}
         onOpenBookmarks={onToggleBookmarks}
         onTakeScreenshot={handleTakeScreenshot}
+        onOpenDiagnostics={() => setIsDiagnosticsOpen(true)}
+        isMkv={Boolean(diagnosticReport?.isMkv || currentVideo?.metadata?.filename?.toLowerCase().endsWith('.mkv'))}
         onShowStats={() => {
           onShowToast(
             `${currentVideo?.metadata?.resolution || '1080p'} • ${
@@ -513,6 +618,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             } • Buffer ${Math.round(bufferedPercent)}%`
           );
         }}
+      />
+
+      {/* 10. MKV Stream & Video Diagnostics Modal */}
+      <MkvDiagnosticsModal
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        currentVideo={currentVideo}
+        report={diagnosticReport}
+        videoWidth={videoWidth}
+        videoHeight={videoHeight}
+        onRemuxToMp4={handleRemuxToMp4}
+        isRemuxing={isRemuxing}
+        remuxProgress={remuxProgress}
+        onShowToast={onShowToast}
       />
     </div>
   );

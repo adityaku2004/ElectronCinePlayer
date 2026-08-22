@@ -48,6 +48,8 @@ interface PlayerContextMenuProps {
   onAddBookmark?: () => void;
   onOpenBookmarks?: () => void;
   onTakeScreenshot?: () => void;
+  onOpenDiagnostics?: () => void;
+  isMkv?: boolean;
 }
 
 export const PlayerContextMenu: React.FC<PlayerContextMenuProps> = ({
@@ -72,7 +74,9 @@ export const PlayerContextMenu: React.FC<PlayerContextMenuProps> = ({
   onShowStats,
   onAddBookmark,
   onOpenBookmarks,
-  onTakeScreenshot
+  onTakeScreenshot,
+  onOpenDiagnostics,
+  isMkv
 }) => {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -302,6 +306,23 @@ export const PlayerContextMenu: React.FC<PlayerContextMenuProps> = ({
         </div>
         <span className="text-[10px] font-mono-time text-gray-500">F</span>
       </button>
+
+      {onOpenDiagnostics && (
+        <button
+          type="button"
+          onClick={() => {
+            onOpenDiagnostics();
+            onClose();
+          }}
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-cyan-300 hover:text-white hover:bg-cyan-500/20 transition-colors"
+        >
+          <div className="flex items-center gap-2.5">
+            <Zap className="w-4 h-4 text-cyan-400" />
+            <span className="font-semibold">MKV Stream Diagnostics</span>
+          </div>
+          <span className="text-[10px] font-mono-time text-cyan-400 font-bold">Fix</span>
+        </button>
+      )}
 
       <button
         type="button"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ListVideo, Settings, Sliders, Ratio, Info, Bookmark, Camera } from 'lucide-react';
+import { ArrowLeft, ListVideo, Settings, Sliders, Ratio, Info, Bookmark, Camera, Zap, Wrench } from 'lucide-react';
 import { PlaylistItem, AspectRatioMode } from '../../types';
 import { formatTime } from '../../utils/formatTime';
 import { formatFileSize } from '../../utils/fileHelpers';
@@ -18,6 +18,8 @@ interface TopInfoBarProps {
   playlistCount: number;
   bookmarkCount?: number;
   onTakeScreenshot?: () => void;
+  onOpenDiagnostics?: () => void;
+  isMkv?: boolean;
 }
 
 export const TopInfoBar: React.FC<TopInfoBarProps> = ({
@@ -32,7 +34,9 @@ export const TopInfoBar: React.FC<TopInfoBarProps> = ({
   onCycleAspectRatio,
   playlistCount,
   bookmarkCount = 0,
-  onTakeScreenshot
+  onTakeScreenshot,
+  onOpenDiagnostics,
+  isMkv
 }) => {
   const metadata = currentVideo?.metadata;
   const resolution = metadata?.resolution || (duration > 0 ? 'HD 1080p' : '');
@@ -86,6 +90,20 @@ export const TopInfoBar: React.FC<TopInfoBarProps> = ({
 
       {/* Right side: Aspect Ratio, Equalizer, Bookmarks, Playlist toggle, Settings */}
       <div className="flex items-center gap-1.5 md:gap-2">
+        {onOpenDiagnostics && (
+          <Tooltip content="MKV Video & Stream Diagnostics">
+            <button
+              type="button"
+              onClick={onOpenDiagnostics}
+              aria-label="MKV Stream Diagnostics"
+              className="p-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 hover:text-cyan-200 transition-colors flex items-center gap-1.5 text-xs font-mono-time font-bold backdrop-blur-md cursor-pointer"
+            >
+              <Wrench className="w-4 h-4 text-cyan-400" />
+              <span className="hidden sm:inline text-[11px]">MKV DIAG</span>
+            </button>
+          </Tooltip>
+        )}
+
         <Tooltip content={`Aspect Ratio: ${aspectRatio.toUpperCase()}`} shortcut="A">
           <button
             type="button"

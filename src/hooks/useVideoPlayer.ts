@@ -36,6 +36,9 @@ export function useVideoPlayer({
   const [aspectRatio, setAspectRatio] = useState<AspectRatioMode>(settings.defaultAspectRatio ?? 'contain');
   const [error, setError] = useState<string | null>(null);
   const [activeCue, setActiveCue] = useState<SubtitleCue | null>(null);
+  const [videoWidth, setVideoWidth] = useState<number>(0);
+  const [videoHeight, setVideoHeight] = useState<number>(0);
+  const [isAudioOnly, setIsAudioOnly] = useState<boolean>(false);
 
   // Initialize and attach Web Audio Gain Node for Audio Boost
   const setupAudioGraph = useCallback(() => {
@@ -221,11 +224,6 @@ export function useVideoPlayer({
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
     const onWaiting = () => setIsBuffering(true);
-    const onPlaying = () => {
-      setIsBuffering(false);
-      setIsPlaying(true);
-      setError(null);
-    };
 
     const onTimeUpdate = () => {
       if (!isSeeking) {
@@ -250,10 +248,30 @@ export function useVideoPlayer({
       setIsBuffering(false);
       setError(null);
 
+      const w = video.videoWidth || 0;
+      const h = video.videoHeight || 0;
+      setVideoWidth(w);
+      setVideoHeight(h);
+      setIsAudioOnly(w === 0 && h === 0 && (video.duration || 0) > 0);
+
       // Apply initial rate & volume
       video.playbackRate = playbackRate;
       video.muted = isMuted;
       video.volume = Math.min(1, volume);
+    };
+
+    const onPlaying = () => {
+      setIsBuffering(false);
+      setIsPlaying(true);
+      setError(null);
+
+      const w = video.videoWidth || 0;
+      const h = video.videoHeight || 0;
+      setVideoWidth(w);
+      setVideoHeight(h);
+      if (w === 0 && h === 0 && (video.duration || 0) > 0) {
+        setIsAudioOnly(true);
+      }
     };
 
     const onEnded = () => {
@@ -328,6 +346,10 @@ export function useVideoPlayer({
     isPip,
     aspectRatio,
     setAspectRatio,
+    videoWidth,
+    videoHeight,
+    isAudioOnly,
+    setIsAudioOnly,
     error,
     setError,
     activeCue,
