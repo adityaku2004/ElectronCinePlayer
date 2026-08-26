@@ -2,239 +2,332 @@
 
 <div align="center">
 
-![Cine Media Player Banner](https://img.shields.io/badge/CINE-MEDIA%20PLAYER-00F0FF?style=for-the-badge&logo=film&logoColor=black)
+```
+  ██████╗██╗███╗   ██╗███████╗    ███╗   ███╗███████╗██████╗ ██╗ █████╗ 
+ ██╔════╝██║████╗  ██║██╔════╝    ████╗ ████║██╔════╝██╔══██╗██║██╔══██╗
+ ██║     ██║██╔██╗ ██║█████╗      ██╔████╔██║█████╗  ██║  ██║██║███████║
+ ██║     ██║██║╚██╗██║██╔══╝      ██║╚██╔╝██║██╔══╝  ██║  ██║██║██╔══██║
+ ╚██████╗██║██║ ╚████║███████╗    ██║ ╚═╝ ██║███████╗██████╔╝██║██║  ██║
+  ╚═════╝╚═╝╚═╝  ╚═══╝╚══════╝    ╚═╝     ╚═╝╚══════╝╚═════╝ ╚═╝╚═╝  ╚═╝
+```
 
-[![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Electron](https://img.shields.io/badge/Electron-43.4-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.1-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Motion](https://img.shields.io/badge/Motion-12.2-FF4154?style=flat-square&logo=framer&logoColor=white)](https://motion.dev/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-4B32C3?style=flat-square)](https://github.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Local%20%26%20Offline-00E676?style=flat-square&logo=shield&logoColor=white)](https://github.com/)
+### ⚡ *Next-Gen Cinematic Media Player Engine for Web & Desktop* ⚡
+
+<p align="center">
+  <img src="https://img.shields.io/badge/CINE-MEDIA%20PLAYER%20v2.4-00F0FF?style=for-the-badge&logo=film&logoColor=black" alt="Cine Banner"/>
+</p>
+
+[![React 19](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Electron](https://img.shields.io/badge/Electron-43.4-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.1-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Web Audio API](https://img.shields.io/badge/Web_Audio-10--Band_DSP-FFA000?style=for-the-badge&logo=soundcharts&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline-00E676?style=for-the-badge&logo=shield&logoColor=white)](https://github.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-FAD02C?style=for-the-badge&logo=open-source-initiative&logoColor=black)](./LICENSE)
 
 <p align="center">
   <strong>A modern, high-performance, cinematic desktop & web media player inspired by VLC and MPV, crafted with React 19, TypeScript, Electron, and Tailwind CSS.</strong>
 </p>
 
-[Key Features](#-features) •
-[Quick Start](#-quick-start) •
-[Building Desktop Installers](#-building-desktop-installers) •
-[Architecture](#-architecture--internals) •
-[Keyboard Shortcuts](#-keyboard-shortcuts) •
-[Troubleshooting](#-troubleshooting--faq)
+[✨ Core Capabilities](#-core-capabilities) •
+[🚀 Quick Start](#-quick-start--installation) •
+[📦 Build & Packaging](#-building-desktop-binaries) •
+[🧠 Architecture & Signal Chain](#-architecture--dsp-signal-chain) •
+[🔌 IPC API Reference](#-electron-ipc-api-reference) •
+[⌨️ Complete Hotkeys](#-keyboard-shortcuts--hotkeys) •
+[🛠️ Troubleshooting & FAQ](#-troubleshooting--faq) •
+[📄 License](#-license)
 
 </div>
 
 ---
 
-## 🌟 Stickers & Badges
+## 🏷️ Badges & Project Stickers
 
 ```
-╔═══════════════════════════════════════════════════════════════════════════════════════════╗
-║   ⚡ 4K / 8K Hardware Accelerated    🎧 10-Band EQ & 200% Boost     📌 Always-On-Top Mode ║
-║   📁 Native Folder Media Library     💬 SRT / VTT / ASS Subtitles   🛡️ 100% Zero Telemetry║
-╚═══════════════════════════════════════════════════════════════════════════════════════════╝
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│  🎬 Cine Media Player Pro       │  ⚡ 4K / 8K Hardware Accelerated Video Decoding         │
+│  🎧 10-Band EQ + 200% Gain      │  📌 Frameless Acrylic Always-on-Top Floating Window    │
+│  💬 Universal Subtitle Engine   │  📁 Zero-Copy `media://` Byte-Range Streaming          │
+│  🔋 Display Sleep Inhibit API   │  🛡️ 100% Offline, Zero Cloud Telemetry, Pure Local     │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ✨ Features
+## ✨ Core Capabilities
 
-### 🎞️ Playback & Engine
-- **Cross-Platform Playback**: Plays **MKV, MP4, WebM, MOV, AVI, M4V, and TS** video formats.
-- **Custom `media://` Streaming Protocol**: High-throughput chunk streaming with HTTP 206 byte-range requests for instant seeking in huge multi-gigabyte video files.
-- **Hardware Display Sleep Blocker**: Uses Electron `powerSaveBlocker` to automatically prevent display dimming, screensavers, or system idle sleep during active video playback.
-- **Always-On-Top Window Pinning**: Pin the player floating above your browser, code editor, or other apps while working.
-- **Audio Boost up to 200% & 10-Band Equalizer**: Built with the Web Audio API (`AudioContext`, `BiquadFilterNode`, `GainNode`) featuring presets for Rock, Pop, Classical, Bass Boost, and Vocal Clarity.
-- **Frame-by-Frame Stepping**: Step forward or backward frame-by-frame with surgical precision (`.` and `,` keys).
-- **Pitch-Corrected Variable Playback Speed**: From 0.25x to 3.0x with smooth incremental adjustments.
+### 🎞️ 1. Ultra-Low Latency Media Engine
+- **Custom `media://` Chunk Protocol**: Custom native Electron protocol with HTTP `206 Partial Content` streaming, enabling instant multi-gigabyte video scrubbing without loading entire files into RAM.
+- **Universal Format Support**: Plays **MKV, MP4, WebM, MOV, AVI, M4V, TS, OGG, and MP3** files with hardware-accelerated video rendering.
+- **Frame-by-Frame Precision**: Surgical stepping controls (`.` for forward frame, `,` for previous frame) with sub-second accuracy.
+- **Pitch-Corrected Time Stretch**: Variable playback speed from `0.25x` to `3.0x` with Web Audio pitch preservation.
+- **Dynamic Aspect Ratio Transformer**: Seamlessly toggle between **Native Source, 16:9 Cinema, 4:3 Vintage, 21:9 Ultra-Wide, and Fill/Stretch**.
 
-### 💬 Subtitle Engine
-- **Universal Formats**: Supports external and embedded `.srt`, `.vtt`, `.ass`, `.ssa`, and `.sub` subtitles.
-- **Live Time Offset / Synchronization**: Easily sync out-of-time subtitles with `[` (-50ms) and `]` (+50ms) micro-adjustments or custom offsets.
-- **Custom Typography & Placement**: Configurable font size, color, background opacity, outline styling, and vertical positioning (bottom, center, top).
+### 🎧 2. Studio-Grade 10-Band Equalizer & Gain Booster
+- **Web Audio API DSP Pipeline**: Intercepts video audio through real-time `BiquadFilterNode` cascades.
+- **Frequencies**: `32Hz`, `64Hz`, `125Hz`, `250Hz`, `500Hz`, `1kHz`, `2kHz`, `4kHz`, `8kHz`, `16kHz`.
+- **Pre-Amplifier Volume Boost**: Boost quiet audio tracks up to **200% (+6dB)** with soft clipping prevention.
+- **Built-in Presets**:
+  - 🎸 **Rock**: Boosted lows (64Hz) and sharp presence (4kHz–8kHz)
+  - 🎷 **Pop**: Punchy upper bass and crisp vocal clarity
+  - 🎻 **Classical**: Extended dynamic range with warm mid-lows
+  - 🔊 **Bass Boost**: Aggressive sub-bass shelf below 125Hz
+  - 🗣️ **Vocal Clarity**: Attenuated mud frequencies (250Hz) and boosted speech bands (1kHz–4kHz)
+  - 🌙 **Night Mode**: Compressed dynamic range for late-night viewing
 
-### 📁 Library, Playlist & History
-- **Native OS Dialogs**: Deep desktop integration for opening single/multiple video files or entire directories.
-- **Persistent Media Library Folders**: Save frequently watched directories (Movies, TV Shows) and rescan them at any time.
-- **Auto Watch History & Resume Prompt**: Automatically saves your exact timestamp and completion status locally, offering a "Resume from where you left off" dialog when re-opened.
-- **Bookmarks & Annotations**: Place colored bookmark pins on specific timestamps and jump to them instantly from the interactive timeline or marks drawer.
-- **Playlist Management**: Real-time search filter, drag-and-drop reordering, title renaming, and sample movie loader.
+### 💬 3. Universal Subtitle Engine & Live Sync
+- **Format Support**: External and embedded `.srt`, `.vtt`, `.ass`, `.ssa`, and `.sub` parsing.
+- **Real-Time Timing Offset**: Calibrate desynchronized subtitle files with micro-step shortcut hotkeys (`[` for -50ms, `]` for +50ms).
+- **Typography & Styling**: Customize subtitle font size, color palette, background backdrop opacity, edge outline thickness, and screen positioning (bottom, center, top).
 
-### 🎨 UI & Aesthetics
-- **Cinematic Frameless Design**: Custom dark acrylic title bar with window controls (minimize, maximize/restore, close).
-- **Smart Control Auto-Hide**: Controls smoothly fade away after inactivity during video playback and reappear on mouse movement.
-- **Customizable Color Themes**: Electric Cyan, Emerald, Neon Violet, Amber Gold, and Crimson Red accent colors.
-- **Picture-in-Picture (PiP)**: Standard HTML5 Picture-in-Picture support.
+### 📁 4. Native OS Desktop Integration
+- **Frameless Acrylic Titlebar**: Custom drag-region titlebar with minimize, maximize/restore, and close buttons.
+- **Power Save Blocker**: Interacts with the OS kernel via Electron `powerSaveBlocker` to inhibit screen sleep and screensaver timeouts during video playback.
+- **Always-on-Top Floating Mode**: Keeps Cine Player pinned above IDEs, spreadsheets, or browser windows.
+- **Media Library Folders**: Save whole movie and series folders on your filesystem with recursive scanner support.
+- **Smart Watch History & Resume Point**: Records exact video playback timestamps locally; prompts to resume upon reopening.
+- **Timestamp Bookmarking**: Tag key scenes with colorful pins and jump across them on the interactive timeline.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Installation
 
-### Prerequisites
-- **Node.js**: `v20.x` or `v22.x` (LTS recommended)
-- **Package Manager**: `npm`, `pnpm`, `bun`, or `yarn`
+### System Requirements
+| Requirement | Minimum | Recommended |
+| :--- | :--- | :--- |
+| **Node.js** | `v20.0.0` (LTS) | `v22.0.0+` |
+| **RAM** | 2 GB | 8 GB+ (for 4K HDR playback) |
+| **OS** | Windows 10/11, macOS 11+ (Intel/M-series), Linux (Ubuntu 20+, Fedora 36+) | Latest 64-bit OS |
 
-### 1. Clone & Install Dependencies
-
+### 1. Clone the Codebase
 ```bash
-# Clone the repository
 git clone https://github.com/your-username/cine-media-player.git
 cd cine-media-player
+```
 
-# Install dependencies
+### 2. Install Project Dependencies
+```bash
 npm install
 ```
 
-### 2. Run in Web Development Mode
-
-To run the web application preview server on `http://localhost:3000`:
-
+### 3. Launch Development Server (Web Mode)
 ```bash
 npm run dev
 ```
+> The Vite dev server will start at `http://localhost:3000`.
 
-### 3. Run in Native Desktop Mode (Electron)
-
-To compile the Electron main & preload bundles and launch the desktop window:
-
+### 4. Launch Desktop Application (Electron Mode)
 ```bash
-# Build main & preload processes
+# Step A: Compile Main and Preload bundles with esbuild
 npm run build:electron:main
 npm run build:electron:preload
 
-# Launch Electron desktop application
+# Step B: Start Electron binary pointing to dist-electron
 npm run electron
 ```
 
 ---
 
-## 📦 Building Desktop Installers
+## 📦 Building Desktop Binaries
 
-To compile and package native desktop binaries for Windows, macOS, or Linux using `electron-builder`:
+The project comes pre-configured with automated build scripts targeting `dist-electron/` using `esbuild` for ultra-fast compilation and `electron-builder` for final binary distribution.
 
-### Build Full Bundle
-
+### Step 1: Compile All Artifacts
 ```bash
-# Compiles React client + Electron main + Preload
 npm run build:electron
 ```
+This runs:
+1. `vite build` (compiles React + Tailwind CSS client to `dist/`)
+2. `npm run build:electron:main` (bundles `src/main/main.ts` into CommonJS `dist-electron/main.cjs`)
+3. `npm run build:electron:preload` (bundles `src/preload/preload.ts` into CommonJS `dist-electron/preload.cjs`)
 
-### Generate Platform-Specific Packages
+### Step 2: Package Platform Executables
 
 ```bash
-# Windows (NSIS Installer .exe & Portable .exe)
+# 🪟 Windows (NSIS Installer .exe & Standalone Portable .exe)
 npx electron-builder --win
 
-# macOS (.dmg & .zip, Universal x64 + arm64 Apple Silicon)
+# 🍏 macOS (Universal .dmg & .zip for Apple Silicon M1/M2/M3/M4 & Intel x64)
 npx electron-builder --mac
 
-# Linux (AppImage & .deb)
+# 🐧 Linux (AppImage & Debian .deb packages)
 npx electron-builder --linux
 ```
 
-All built installation packages will be located in the `dist-electron/` and `release/` directories.
+All distribution installers are generated in the `release/` directory.
 
 ---
 
-## 🏗️ Architecture & Internals
+## 🧠 Architecture & DSP Signal Chain
+
+### High-Level System Architecture
 
 ```
-cine-media-player/
-├── src/
-│   ├── main/                    # Electron Main Process
-│   │   ├── main.ts              # App lifecycle, single-instance lock, window creation
-│   │   ├── ipc/                 # IPC handlers (dialogs, fs, window, updater, power)
-│   │   ├── protocols/           # Custom media:// byte-range streaming handler
-│   │   ├── menus/               # Native application menus & system tray
-│   │   └── services/            # Store & watch history filesystem manager
-│   ├── preload/                 # Electron Preload Bridge
-│   │   ├── preload.ts           # Secure contextBridge.exposeInMainWorld()
-│   │   └── types.ts             # Typed Electron API interfaces
-│   ├── shared/                  # Shared Types & IPC Channel Constants
-│   │   ├── constants.ts         # IPC channel name definitions
-│   │   └── types.ts             # Media file info, watch history & folder types
-│   ├── components/              # React UI Components
-│   │   ├── VideoPlayer/         # Core video element, gesture layer & keyboard loop
-│   │   ├── PlayerControls/      # Timeline, playback buttons, time displays
-│   │   ├── TitleBar/            # Custom frameless title bar & window buttons
-│   │   ├── AudioEffects/        # 10-band Web Audio EQ & volume booster
-│   │   ├── SubtitleMenu/        # Subtitle track selector & sync offset tool
-│   │   ├── Bookmarks/           # Bookmark manager & timeline pin renderer
-│   │   ├── Playlist/            # Playlist panel, media library folders & search
-│   │   ├── Settings/            # Multi-tab settings modal (Desktop, Audio, Theme)
-│   │   └── EmptyState/          # Zero-state drag-and-drop dropzone & recent files
-│   ├── services/                # Web & Electron runtime abstractions
-│   │   └── electronService.ts   # Unified API bridge with web fallback
-│   ├── types/                   # Frontend TypeScript interfaces
-│   ├── App.tsx                  # Root application state & event orchestrator
-│   └── main.tsx                 # React DOM root entry
-├── index.html                   # HTML5 document template
-├── vite.config.ts               # Vite configuration with Tailwind CSS plugin
-├── tsconfig.json                # Strict TypeScript configuration
-└── package.json                 # Build scripts & dependencies
+┌────────────────────────────────────────────────────────────────────────┐
+│                        RENDERER PROCESS (Vite / React)                 │
+│                                                                        │
+│   ┌──────────────┐    ┌──────────────┐    ┌────────────────────────┐   │
+│   │ VideoPlayer  │    │ SubtitleSync │    │ AudioEqualizer (10-Band│   │
+│   │ (HTML5/Media)│    │ (SRT/VTT/ASS)│    │  BiquadFilter Pipeline)│   │
+│   └──────┬───────┘    └──────┬───────┘    └───────────┬────────────┘   │
+│          │                   │                        │                │
+│          └───────────────────┴────────────────────────┘                │
+│                                  │ (window.electronAPI)                │
+└──────────────────────────────────┼─────────────────────────────────────┘
+                                   │  ContextBridge IPC (ContextIsolated)
+┌──────────────────────────────────┼─────────────────────────────────────┐
+│                                  │                                     │
+│                     PRELOAD BRIDGE (preload.cjs)                       │
+│     Safely exposed typed methods & event subscriber unlisteners        │
+│                                  │                                     │
+└──────────────────────────────────┼─────────────────────────────────────┘
+                                   │  IPC Channels (invoke / send)
+┌──────────────────────────────────┼─────────────────────────────────────┐
+│                     ELECTRON MAIN PROCESS (main.cjs)                   │
+│                                                                        │
+│   ┌────────────────────┐  ┌───────────────────┐  ┌─────────────────┐   │
+│   │ media:// Protocol  │  │ Window Manager    │  │ PowerSaveBlocker│   │
+│   │ (206 Byte Ranges)  │  │ (Frameless/Pin)   │  │ (Display Sleep) │   │
+│   └─────────┬──────────┘  └─────────┬─────────┘  └────────┬────────┘   │
+│             │                       │                     │            │
+│   ┌─────────┴──────────┐  ┌─────────┴─────────┐  ┌────────┴────────┐   │
+│   │ OS File Dialogs    │  │ Watch History JSON│  │ Tray & App Menu │   │
+│   │ (Files / Folders)  │  │ Persistence Store │  │ (Native Events) │   │
+│   └────────────────────┘  └───────────────────┘  └─────────────────┘   │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Security Architecture
-- `contextIsolation: true` is strictly enforced.
-- `nodeIntegration: false` prevents renderer-side arbitrary code execution.
-- Sensitive Node.js APIs (`fs`, `child_process`, `dialog`) are gated through strictly typed IPC handlers in `src/main/ipc/`.
-- Local media access is granted strictly through a sanitized `media://` protocol handler that validates file paths.
+### Web Audio API Signal Chain
+
+```
+[ <video> HTML5 Media Source ]
+              │
+              ▼
+    [ MediaElementSourceNode ]
+              │
+              ▼
+    [ BiquadFilter 32 Hz ]  (Low Shelf)
+              │
+              ▼
+    [ BiquadFilter 64 Hz ]  (Peaking)
+              │
+              ▼
+    [ BiquadFilter 125 Hz ] (Peaking)
+              │
+              ▼
+    [ BiquadFilter 250 Hz - 8 kHz ] (Peaking x 6)
+              │
+              ▼
+    [ BiquadFilter 16 kHz ] (High Shelf)
+              │
+              ▼
+    [ PreAmp GainNode ]     (0% – 200% Gain Multiplier)
+              │
+              ▼
+ [ AudioDestinationNode (Speakers / Headphones) ]
+```
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## 🔌 Electron IPC API Reference
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>Space</kbd> / <kbd>K</kbd> | Toggle Play / Pause |
-| <kbd>F</kbd> | Toggle Fullscreen |
-| <kbd>M</kbd> | Toggle Mute |
-| <kbd>←</kbd> / <kbd>→</kbd> | Jump Backward / Forward 5 seconds |
-| <kbd>J</kbd> / <kbd>L</kbd> | Jump Backward / Forward 10 seconds |
-| <kbd>↑</kbd> / <kbd>↓</kbd> | Adjust Volume (+5% / -5%) |
-| <kbd>[</kbd> / <kbd>]</kbd> | Decrease / Increase Subtitle Offset (±50ms) |
-| <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Decrease / Increase Playback Speed |
-| <kbd>0</kbd> – <kbd>9</kbd> | Seek to 0% – 90% of the video duration |
-| <kbd>C</kbd> | Toggle Subtitles On / Off |
-| <kbd>A</kbd> | Cycle Aspect Ratio (Original, 16:9, 4:3, 21:9, Stretch) |
-| <kbd>B</kbd> | Add Bookmark at current timestamp |
-| <kbd>E</kbd> | Open Audio Equalizer |
-| <kbd>P</kbd> | Toggle Playlist Drawer |
-| <kbd>T</kbd> | Toggle Always-on-Top (Desktop) |
-| <kbd>,</kbd> / <kbd>.</kbd> | Step Previous Frame / Next Frame |
-| <kbd>Esc</kbd> | Exit Fullscreen / Close Drawers & Modals |
+The renderer process securely communicates with the Electron main process via `window.electronAPI`:
+
+| Method | Parameters | Return Type | Description |
+| :--- | :--- | :--- | :--- |
+| `openFileDialog(options?)` | `OpenDialogOptions` | `Promise<MediaFileInfo[]>` | Opens native OS file picker for media files. |
+| `openFolderDialog()` | `none` | `Promise<FolderOpenResult>` | Opens native OS directory picker and recursively scans media. |
+| `getFileInfo(filePath)` | `filePath: string` | `Promise<MediaFileInfo>` | Returns file size, MIME type, parsed name, and `media://` URL. |
+| `minimizeWindow()` | `none` | `Promise<void>` | Minimizes the desktop window. |
+| `maximizeWindow()` | `none` | `Promise<void>` | Toggles window maximize / unmaximize state. |
+| `closeWindow()` | `none` | `Promise<void>` | Closes and terminates the player window. |
+| `setAlwaysOnTop(flag)` | `flag: boolean` | `Promise<void>` | Pins/unpins window floating over other applications. |
+| `getAlwaysOnTop()` | `none` | `Promise<boolean>` | Returns the current always-on-top state. |
+| `setPowerSaveBlocker(active)` | `active: boolean` | `Promise<boolean>` | Inhibits OS display sleep during playback. |
+| `saveWatchHistory(item)` | `WatchHistoryItem` | `Promise<void>` | Persists resume position, duration, and completion status. |
+| `getWatchHistory()` | `none` | `Promise<WatchHistoryItem[]>` | Retrieves stored historical playback points. |
+| `addLibraryFolder(path, name?)` | `string, string?` | `Promise<LibraryFolder>` | Registers a directory to persistent library. |
+| `removeLibraryFolder(id)` | `id: string` | `Promise<void>` | Removes a registered directory from library. |
+| `checkForUpdates()` | `none` | `Promise<UpdateStatus>` | Checks update server for new releases. |
+| `onFileOpened(callback)` | `(filePath) => void` | `() => void` | Listens for OS double-click or CLI file open events. |
+| `onMenuAction(callback)` | `(action) => void` | `() => void` | Subscribes to native application menu clicks. |
 
 ---
 
-## ❓ Troubleshooting & FAQ
+## ⌨️ Keyboard Shortcuts & Hotkeys
+
+| Key | Context | Action Description |
+| :---: | :---: | :--- |
+| <kbd>Space</kbd> / <kbd>K</kbd> | Global | Toggle Play / Pause |
+| <kbd>F</kbd> | Global | Toggle Fullscreen Mode |
+| <kbd>M</kbd> | Global | Toggle Audio Mute |
+| <kbd>←</kbd> / <kbd>→</kbd> | Global | Jump Backward / Forward 5 seconds |
+| <kbd>J</kbd> / <kbd>L</kbd> | Global | Jump Backward / Forward 10 seconds |
+| <kbd>↑</kbd> / <kbd>↓</kbd> | Global | Volume Up / Down (+5% / -5%) |
+| <kbd>[</kbd> / <kbd>]</kbd> | Subtitle | Subtitle Delay Sync Adjust (-50ms / +50ms) |
+| <kbd>&lt;</kbd> / <kbd>&gt;</kbd> | Speed | Decrease / Increase Playback Speed (0.25x – 3x) |
+| <kbd>0</kbd> – <kbd>9</kbd> | Timeline | Seek to percentage of video (0% to 90%) |
+| <kbd>,</kbd> / <kbd>.</kbd> | Precision | Step Previous Frame / Next Frame |
+| <kbd>C</kbd> | Subtitle | Toggle Subtitles On / Off |
+| <kbd>A</kbd> | Display | Cycle Aspect Ratio (Original, 16:9, 4:3, 21:9, Stretch) |
+| <kbd>B</kbd> | Bookmark | Add Bookmark Pin at current playback timestamp |
+| <kbd>E</kbd> | Audio | Open 10-Band Equalizer & Gain Modal |
+| <kbd>P</kbd> | Playlist | Toggle Playlist & Media Library Drawer |
+| <kbd>T</kbd> | Window | Toggle Always-on-Top Mode (Desktop only) |
+| <kbd>Esc</kbd> | UI | Exit Fullscreen / Dismiss Active Dialogs |
+
+---
+
+## 🛠️ Troubleshooting & FAQ
 
 <details>
-<summary><strong>Q: Why does my MKV file have video but no audio?</strong></summary>
+<summary><strong>1. Why is video audio silent on certain MKV files?</strong></summary>
 
-Some MKV files use proprietary or non-standard audio codecs (e.g. AC-3 / DTS / EAC-3) that may not be supported by standard Chromium decoders without external ffmpeg transcoders. Standard formats with AAC, MP3, Opus, or Vorbis audio tracks will play with full hardware acceleration.
+Certain MKV video containers embed proprietary surround codecs such as **DTS, Dolby TrueHD, or AC-3**. Chromium's native decoder does not bundle proprietary decoders by default. Videos encoded with **AAC, AC3/EAC3 (supported in modern builds), MP3, Opus, FLAC, or Vorbis** play seamlessly.
 </details>
 
 <details>
-<summary><strong>Q: How do I open files by double-clicking them in Windows Explorer or macOS Finder?</strong></summary>
+<summary><strong>2. Why are subtitles not showing up?</strong></summary>
 
-Once packaged with `electron-builder`, Cine Media Player registers file associations for `.mp4`, `.mkv`, `.webm`, `.mov`, `.avi`, `.m4v`, and `.ts`. The application handles initial launch arguments and the macOS `open-file` event automatically.
+Make sure your subtitle file is in `.srt`, `.vtt`, or `.ass` format and UTF-8 encoded. If subtitles are desynchronized from the audio dialogue, press <kbd>[</kbd> or <kbd>]</kbd> to adjust the offset in 50ms increments.
 </details>
 
 <details>
-<summary><strong>Q: Is any video or telemetry data uploaded to the internet?</strong></summary>
+<summary><strong>3. How does the Always-On-Top window mode work?</strong></summary>
 
-**No.** Cine Media Player is 100% offline-first. All media decoding, subtitles, bookmarks, equalizers, and watch histories are processed and stored locally on your machine.
+Pressing <kbd>T</kbd> or toggling "Always On Top" in Settings > Desktop instructs Electron's native `BrowserWindow.setAlwaysOnTop(true, 'floating')` API to maintain Z-order priority over all other active desktop windows.
 </details>
+
+<details>
+<summary><strong>4. Can I use this in standard web browsers without Electron?</strong></summary>
+
+**Yes!** Cine Player has a built-in isomorphic abstraction layer. In web mode, drag-and-drop file ingestion, Web Audio EQ, local storage history, and HTML5 video streaming work out-of-the-box in Chrome, Firefox, Safari, and Edge.
+</details>
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. **Fork the Repository**
+2. **Create a Feature Branch**: `git checkout -b feature/amazing-feature`
+3. **Commit your Changes**: `git commit -m 'feat: Add amazing feature'`
+4. **Push to the Branch**: `git push origin feature/amazing-feature`
+5. **Open a Pull Request**
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Distributed under the **MIT License**. See [`LICENSE`](./LICENSE) for full details.
+
+```
+Copyright (c) 2026 Cine Media Player Contributors
+```
 
 <div align="center">
-  <sub>Built with ❤️ for cinephiles and developers everywhere.</sub>
+  <sub>Engineered with precision for movie enthusiasts, audio engineers, and developers.</sub>
 </div>
