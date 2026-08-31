@@ -22,6 +22,17 @@ export function useVideoPlayer({
   const gainNodeRef = useRef<GainNode | null>(null);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
+  // High-performance seek tracking refs
+  const pendingSeekTargetRef = useRef<number | null>(null);
+  const seekDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const seekRafRef = useRef<number | null>(null);
+  const bufferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveStorageTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const activeSeekAccumulatorToastRef = useRef<{ totalDelta: number; timer: NodeJS.Timeout | null }>({
+    totalDelta: 0,
+    timer: null
+  });
+
   // Playback state
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -39,6 +50,26 @@ export function useVideoPlayer({
   const [videoWidth, setVideoWidth] = useState<number>(0);
   const [videoHeight, setVideoHeight] = useState<number>(0);
   const [isAudioOnly, setIsAudioOnly] = useState<boolean>(false);
+
+  // Perform low-overhead hardware seek using fastSeek if available
+  const performHardwareSeek = useCallback((targetTime: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      if ('fastSeek' in video && typeof (video as unknown as { fastSeek: (t: number) => void }).fastSeek === 'function') {
+        (video as unknown as { fastSeek: (t: number) => void }).fastSeek(targetTime);
+      } else {
+        video.currentTime = targetTime;
+      }
+    } catch {
+      try {
+        video.currentTime = targetTime;
+      } catch {
+        // Ignore seek error if video unmounted
+      }
+    }
+  }, []);
 
   // Initialize and attach Web Audio Gain Node for Audio Boost
   const setupAudioGraph = useCallback(() => {
@@ -138,27 +169,84 @@ export function useVideoPlayer({
     setIsPlaying(false);
   }, []);
 
-  // Seek relative or absolute
+  // Debounced storage position saver
+  const debouncedSavePlaybackPosition = useCallback((videoId: string, time: number) => {
+    if (saveStorageTimerRef.current) {
+      clearTimeout(saveStorageTimerRef.current);
+    }
+    saveStorageTimerRef.current = setTimeout(() => {
+      extensionStorage.savePlaybackPosition(videoId, time);
+    }, 500);
+  }, []);
+
+  // Seek relative or absolute with zero-latency UI update and hardware fastSeek
   const seekTo = useCallback((targetTime: number) => {
     const video = videoRef.current;
-    if (!video || !isFinite(duration)) return;
+    if (!video || !isFinite(duration) || duration <= 0) return;
 
     const clampedTime = Math.max(0, Math.min(duration, targetTime));
-    video.currentTime = clampedTime;
+    pendingSeekTargetRef.current = clampedTime;
+
+    // Immediately update UI timeline position without waiting for decoder
     setCurrentTime(clampedTime);
+    setIsSeeking(true);
 
-    if (currentVideo) {
-      extensionStorage.savePlaybackPosition(currentVideo.id, clampedTime);
+    if (seekRafRef.current) {
+      cancelAnimationFrame(seekRafRef.current);
     }
-  }, [duration, currentVideo]);
 
+    seekRafRef.current = requestAnimationFrame(() => {
+      performHardwareSeek(clampedTime);
+      if (currentVideo) {
+        debouncedSavePlaybackPosition(currentVideo.id, clampedTime);
+      }
+    });
+  }, [duration, currentVideo, performHardwareSeek, debouncedSavePlaybackPosition]);
+
+  // Ultra-fast relative seek (Right / Left keys, 5s / 10s skips) with accumulation
   const seekRelative = useCallback((deltaSeconds: number) => {
     const video = videoRef.current;
     if (!video) return;
-    const target = (video.currentTime || 0) + deltaSeconds;
-    seekTo(target);
-    onShowToast?.(`${deltaSeconds > 0 ? '+' : ''}${deltaSeconds}s`);
-  }, [seekTo, onShowToast]);
+
+    const totalDur = isFinite(duration) && duration > 0 ? duration : (video.duration || 999999);
+
+    // Calculate base time from in-flight target if user is pressing keys rapidly
+    const baseTime = pendingSeekTargetRef.current !== null
+      ? pendingSeekTargetRef.current
+      : (video.currentTime || currentTime || 0);
+
+    const target = Math.max(0, Math.min(totalDur, baseTime + deltaSeconds));
+    pendingSeekTargetRef.current = target;
+
+    // 1. Instant UI update (0ms lag on timeline, time badges & controls)
+    setCurrentTime(target);
+    setIsSeeking(true);
+
+    // 2. Accumulate delta for toast indicator
+    activeSeekAccumulatorToastRef.current.totalDelta += deltaSeconds;
+    if (activeSeekAccumulatorToastRef.current.timer) {
+      clearTimeout(activeSeekAccumulatorToastRef.current.timer);
+    }
+    activeSeekAccumulatorToastRef.current.timer = setTimeout(() => {
+      const accum = activeSeekAccumulatorToastRef.current.totalDelta;
+      if (accum !== 0) {
+        onShowToast?.(`${accum > 0 ? '+' : ''}${accum}s`);
+      }
+      activeSeekAccumulatorToastRef.current.totalDelta = 0;
+    }, 200);
+
+    // 3. Debounce hardware seek execution by a micro-frame for smooth rapid-fire key presses
+    if (seekDebounceTimerRef.current) {
+      clearTimeout(seekDebounceTimerRef.current);
+    }
+
+    seekDebounceTimerRef.current = setTimeout(() => {
+      performHardwareSeek(target);
+      if (currentVideo) {
+        debouncedSavePlaybackPosition(currentVideo.id, target);
+      }
+    }, 16); // 1-frame (16ms) batch window
+  }, [duration, currentTime, performHardwareSeek, onShowToast, currentVideo, debouncedSavePlaybackPosition]);
 
   // Change playback speed
   const changePlaybackRate = useCallback((rate: number) => {
@@ -221,12 +309,58 @@ export function useVideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-    const onWaiting = () => setIsBuffering(true);
+    const clearBufferTimeout = () => {
+      if (bufferTimeoutRef.current) {
+        clearTimeout(bufferTimeoutRef.current);
+        bufferTimeoutRef.current = null;
+      }
+    };
+
+    const onPlay = () => {
+      clearBufferTimeout();
+      setIsBuffering(false);
+      setIsPlaying(true);
+    };
+
+    const onPause = () => {
+      clearBufferTimeout();
+      setIsBuffering(false);
+      setIsPlaying(false);
+    };
+
+    // Debounce the buffering indicator by 280ms so sub-second 5s/10s seeks don't flash a loading spinner
+    const onWaiting = () => {
+      clearBufferTimeout();
+      bufferTimeoutRef.current = setTimeout(() => {
+        setIsBuffering(true);
+      }, 280);
+    };
+
+    const onSeeking = () => {
+      setIsSeeking(true);
+    };
+
+    const onSeeked = () => {
+      clearBufferTimeout();
+      setIsBuffering(false);
+      // If no new relative keyboard seek has been queued, clear in-flight target and sync
+      if (pendingSeekTargetRef.current === null) {
+        setIsSeeking(false);
+        setCurrentTime(video.currentTime);
+      }
+    };
+
+    const onCanPlay = () => {
+      clearBufferTimeout();
+      setIsBuffering(false);
+    };
 
     const onTimeUpdate = () => {
-      if (!isSeeking) {
+      clearBufferTimeout();
+      setIsBuffering(false);
+
+      // Only update time from video element when not in the middle of a rapid key seek
+      if (pendingSeekTargetRef.current === null && !isSeeking) {
         setCurrentTime(video.currentTime);
       }
 
@@ -237,13 +371,14 @@ export function useVideoPlayer({
         setBufferedPercent(Math.min(100, (bufferedEnd / dur) * 100));
       }
 
-      // Periodically record playback position
+      // Periodically record playback position (debounced)
       if (currentVideo && Math.floor(video.currentTime) % 5 === 0) {
-        extensionStorage.savePlaybackPosition(currentVideo.id, video.currentTime);
+        debouncedSavePlaybackPosition(currentVideo.id, video.currentTime);
       }
     };
 
     const onLoadedMetadata = () => {
+      clearBufferTimeout();
       setDuration(video.duration || 0);
       setIsBuffering(false);
       setError(null);
@@ -261,6 +396,7 @@ export function useVideoPlayer({
     };
 
     const onPlaying = () => {
+      clearBufferTimeout();
       setIsBuffering(false);
       setIsPlaying(true);
       setError(null);
@@ -275,6 +411,8 @@ export function useVideoPlayer({
     };
 
     const onEnded = () => {
+      clearBufferTimeout();
+      setIsBuffering(false);
       setIsPlaying(false);
       if (settings.loop) {
         video.currentTime = 0;
@@ -285,6 +423,7 @@ export function useVideoPlayer({
     };
 
     const onError = () => {
+      clearBufferTimeout();
       setIsBuffering(false);
       setIsPlaying(false);
       const mediaError = video.error;
@@ -300,6 +439,9 @@ export function useVideoPlayer({
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
     video.addEventListener('waiting', onWaiting);
+    video.addEventListener('seeking', onSeeking);
+    video.addEventListener('seeked', onSeeked);
+    video.addEventListener('canplay', onCanPlay);
     video.addEventListener('playing', onPlaying);
     video.addEventListener('timeupdate', onTimeUpdate);
     video.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -309,9 +451,13 @@ export function useVideoPlayer({
     video.addEventListener('leavepictureinpicture', onLeavePip);
 
     return () => {
+      clearBufferTimeout();
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
       video.removeEventListener('waiting', onWaiting);
+      video.removeEventListener('seeking', onSeeking);
+      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('playing', onPlaying);
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);
@@ -320,11 +466,16 @@ export function useVideoPlayer({
       video.removeEventListener('enterpictureinpicture', onEnterPip);
       video.removeEventListener('leavepictureinpicture', onLeavePip);
     };
-  }, [currentVideo, isSeeking, playbackRate, isMuted, volume, settings.loop, onVideoEnd]);
+  }, [currentVideo, isSeeking, playbackRate, isMuted, volume, settings.loop, onVideoEnd, debouncedSavePlaybackPosition]);
 
-  // Clean up AudioContext on unmount
+  // Clean up timers & AudioContext on unmount
   useEffect(() => {
     return () => {
+      if (seekDebounceTimerRef.current) clearTimeout(seekDebounceTimerRef.current);
+      if (seekRafRef.current) cancelAnimationFrame(seekRafRef.current);
+      if (bufferTimeoutRef.current) clearTimeout(bufferTimeoutRef.current);
+      if (saveStorageTimerRef.current) clearTimeout(saveStorageTimerRef.current);
+      if (activeSeekAccumulatorToastRef.current.timer) clearTimeout(activeSeekAccumulatorToastRef.current.timer);
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close().catch(() => {});
       }
