@@ -92,71 +92,139 @@
 
 ---
 
-## 🚀 Quick Start & Installation
+---
 
-### System Requirements
+## 🚀 Installation & Setup Guide
+
+### 📋 Prerequisites & System Requirements
 | Requirement | Minimum | Recommended |
 | :--- | :--- | :--- |
 | **Node.js** | `v20.0.0` (LTS) | `v22.0.0+` |
-| **RAM** | 2 GB | 8 GB+ (for 4K HDR playback) |
-| **OS** | Windows 10/11, macOS 11+ (Intel/M-series), Linux (Ubuntu 20+, Fedora 36+) | Latest 64-bit OS |
+| **Package Manager** | `npm` v9+ or `yarn` / `pnpm` / `bun` | `npm` v10+ |
+| **Linux Build Tools** (for packaging `.deb`) | `dpkg`, `fakeroot`, `binutils` | Standard `build-essential` |
+| **RAM** | 2 GB | 8 GB+ (for 4K HDR playback & packaging) |
+| **OS** | Linux (Ubuntu/Debian/Mint/Fedora/Arch), Windows 10/11, macOS 11+ | 64-bit Linux / Windows / macOS |
 
-### 1. Clone the Codebase
+#### Linux Build Dependencies (Ubuntu / Debian / Linux Mint):
+To build native Linux packages (`.deb`, `AppImage`), ensure the standard utilities are installed:
+```bash
+sudo apt update
+sudo apt install -y build-essential libnotify4 libxtst6 libnss3 libasound2 libgbm1
+```
+
+---
+
+### 💻 Step-by-Step Installation
+
+#### 1. Clone the Repository
 ```bash
 git clone https://github.com/your-username/cine-media-player.git
 cd cine-media-player
 ```
 
-### 2. Install Project Dependencies
+#### 2. Install Project Dependencies
 ```bash
 npm install
 ```
 
-### 3. Launch Development Server (Web Mode)
+#### 3. Run in Web Development Mode (Vite Preview)
+To test and develop the player interface in your web browser:
 ```bash
 npm run dev
 ```
-> The Vite dev server will start at `http://localhost:3000`.
+> The development server will launch at **`http://localhost:3000`**.
 
-### 4. Launch Desktop Application (Electron Mode)
+#### 4. Run Desktop Application (Electron Live Mode)
+To launch the native desktop player window locally:
 ```bash
-# Step A: Compile Main and Preload bundles with esbuild
-npm run build:electron:main
-npm run build:electron:preload
+# Step A: Build frontend & main/preload Electron bundles
+npm run build:electron
 
-# Step B: Start Electron binary pointing to dist-electron
+# Step B: Start the Electron desktop app
 npm run electron
 ```
 
 ---
 
-## 📦 Building Desktop Binaries
+## 🏗️ How to Build & Create `.deb` / Executable Packages
 
-The project comes pre-configured with automated build scripts targeting `dist-electron/` using `esbuild` for ultra-fast compilation and `electron-builder` for final binary distribution.
+Cine Media Player is powered by **`esbuild`** for sub-second TypeScript compilation and **`electron-builder`** for production desktop binary packaging.
 
-### Step 1: Compile All Artifacts
+### 🐧 Creating a Debian / Ubuntu `.deb` Package
+
+To generate a ready-to-distribute `.deb` installer for Debian, Ubuntu, Linux Mint, Pop!_OS, and Kali:
+
+#### Option 1: Fast One-Step Build & Package
+Run the dedicated `.deb` distribution script:
 ```bash
+npm run dist:deb
+```
+
+#### Option 2: Step-by-Step Manual Execution
+If you prefer building each stage individually:
+```bash
+# 1. Compile the React + Vite frontend and Electron processes
 npm run build:electron
-```
-This runs:
-1. `vite build` (compiles React + Tailwind CSS client to `dist/`)
-2. `npm run build:electron:main` (bundles `src/main/main.ts` into CommonJS `dist-electron/main.cjs`)
-3. `npm run build:electron:preload` (bundles `src/preload/preload.ts` into CommonJS `dist-electron/preload.cjs`)
 
-### Step 2: Package Platform Executables
+# 2. Package specifically for Debian .deb
+npx electron-builder --linux deb
+```
+
+#### 🎯 Output Location:
+The generated `.deb` package will be placed in the `release/` directory:
+```
+release/
+├── cine-media-player_0.0.0_amd64.deb    <-- Debian package installer
+├── linux-unpacked/                      <-- Unpacked binary directory
+└── builder-effective-config.yaml
+```
+
+#### 📥 How to Install the Generated `.deb` on Ubuntu / Debian:
+
+Once built, you can install Cine Media Player system-wide using `apt` or `dpkg`:
 
 ```bash
-# 🪟 Windows (NSIS Installer .exe & Standalone Portable .exe)
-npx electron-builder --win
+# Method A: Using apt (recommended, automatically resolves dependencies)
+sudo apt install ./release/cine-media-player_*_amd64.deb
 
-# 🍏 macOS (Universal .dmg & .zip for Apple Silicon M1/M2/M3/M4 & Intel x64)
-npx electron-builder --mac
-
-# 🐧 Linux (AppImage & Debian .deb packages)
-npx electron-builder --linux
+# Method B: Using dpkg
+sudo dpkg -i ./release/cine-media-player_*_amd64.deb
+sudo apt install -f   # Fix any missing dependencies if needed
 ```
 
-All distribution installers are generated in the `release/` directory.
+#### 🚀 Launching the Installed App:
+- From application menu: Search for **"Cine Media Player"** in your desktop environment (GNOME, KDE, XFCE).
+- From terminal:
+  ```bash
+  cine-media-player
+  ```
+
+#### 🗑️ Uninstalling the `.deb`:
+```bash
+sudo apt remove cine-media-player
+```
+
+---
+
+### 📦 Building for Other Formats and Operating Systems
+
+| Target | Command | Output File |
+| :--- | :--- | :--- |
+| **Linux `.deb` Package** | `npm run dist:deb` | `release/*.deb` |
+| **Linux `AppImage` (Portable)** | `npm run dist:appimage` | `release/*.AppImage` |
+| **All Linux Formats** (`.deb` + `AppImage` + `.tar.gz`) | `npm run dist:linux` | `release/*` |
+| **Windows Installer** (`.exe` NSIS) | `npm run dist:win` | `release/*.exe` |
+| **macOS Package** (`.dmg` Universal) | `npm run dist:mac` | `release/*.dmg` |
+| **All Default Platforms** | `npm run dist` | `release/*` |
+
+#### Specific Architecture Target (e.g. ARM64 / Raspberry Pi / Apple Silicon):
+```bash
+# Build .deb for ARM64:
+npx electron-builder --linux deb --arm64
+
+# Build .deb for x86_64 / amd64:
+npx electron-builder --linux deb --x64
+```
 
 ---
 

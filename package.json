@@ -10,9 +10,57 @@
     "build:electron:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist-electron/preload.cjs --external:electron",
     "build:electron": "npm run build && npm run build:electron:main && npm run build:electron:preload",
     "electron": "electron dist-electron/main.cjs",
+    "dist": "npm run build:electron && electron-builder",
+    "dist:deb": "npm run build:electron && electron-builder --linux deb",
+    "dist:appimage": "npm run build:electron && electron-builder --linux AppImage",
+    "dist:linux": "npm run build:electron && electron-builder --linux deb AppImage tar.gz",
+    "dist:win": "npm run build:electron && electron-builder --win nsis",
+    "dist:mac": "npm run build:electron && electron-builder --mac dmg",
     "preview": "vite preview",
-    "clean": "rm -rf dist dist-electron server.js",
+    "clean": "rm -rf dist dist-electron release server.js",
     "lint": "tsc --noEmit"
+  },
+  "main": "dist-electron/main.cjs",
+  "build": {
+    "appId": "com.cinemediaplayer.app",
+    "productName": "Cine Media Player",
+    "copyright": "Copyright © 2026 Cine Media Player Contributors",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "linux": {
+      "target": [
+        "deb",
+        "AppImage"
+      ],
+      "category": "AudioVideo;Player;Video;",
+      "maintainer": "Aditya Udai <adityaudai2004@gmail.com>",
+      "synopsis": "Next-Gen Cinematic Media Player Engine for Web & Desktop",
+      "description": "A modern, high-performance, cinematic desktop media player with 10-band equalizer, audio boost, and universal subtitle engine.",
+      "executableName": "cine-media-player"
+    },
+    "deb": {
+      "priority": "optional",
+      "packageCategory": "video",
+      "depends": [
+        "libnotify4",
+        "libxtst6",
+        "libnss3",
+        "libasound2",
+        "libgbm1"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.video"
+    }
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
