@@ -1,5 +1,9 @@
 {
-  "name": "react-example",
+  "name": "cine-media-player",
+  "productName": "Cine Media Player",
+  "description": "A modern VLC-inspired desktop media player built with Electron.",
+  "author": "Aditya Udai <adityaudai2004@gmail.com>",
+  "homepage": "https://github.com/adityaudai2004/cine-media-player",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,6 +13,7 @@
     "build:electron:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist-electron/main.cjs --external:electron",
     "build:electron:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist-electron/preload.cjs --external:electron",
     "build:electron": "npm run build && npm run build:electron:main && npm run build:electron:preload",
+    "build:linux": "npm run build:electron && electron-builder --linux deb",
     "electron": "electron dist-electron/main.cjs",
     "dist": "npm run build:electron && electron-builder",
     "dist:deb": "npm run build:electron && electron-builder --linux deb",
@@ -25,6 +30,7 @@
     "appId": "com.cinemediaplayer.app",
     "productName": "Cine Media Player",
     "copyright": "Copyright © 2026 Cine Media Player Contributors",
+    "artifactName": "${name}_${version}_${arch}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -32,18 +38,22 @@
       "dist/**/*",
       "dist-electron/**/*"
     ],
+    "icon": "build/icon.png",
     "linux": {
       "target": [
         "deb",
         "AppImage"
       ],
+      "icon": "build/icons",
       "category": "AudioVideo;Player;Video;",
+      "syncDesktopName": true,
       "maintainer": "Aditya Udai <adityaudai2004@gmail.com>",
       "synopsis": "Next-Gen Cinematic Media Player Engine for Web & Desktop",
       "description": "A modern, high-performance, cinematic desktop media player with 10-band equalizer, audio boost, and universal subtitle engine.",
       "executableName": "cine-media-player"
     },
     "deb": {
+      "packageName": "cine-media-player",
       "priority": "optional",
       "packageCategory": "video",
       "depends": [

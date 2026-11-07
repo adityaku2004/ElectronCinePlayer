@@ -1,0 +1,9 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+profile "cine-media-player" "/opt/Cine Media Player/cine-media-player" flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/cine-media-player>
+}
