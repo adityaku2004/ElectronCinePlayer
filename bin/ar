@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+/**
+ * Pure Node.js drop-in replacement for `ar`
+ * Implements the standard GNU/BSD Unix `ar` archive utility used to assemble Debian packages (.deb)
+ * Supports:
+ *   ar -r[flags] <archive.a/deb> <file1> <file2> ...
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+const AR_MAGIC = '!<arch>\n';
+
+function padRight(str, len) {
+  str = String(str || '');
+  while (str.length < len) {
+    str += ' ';
+  }
+  return str.slice(0, len);
+}
+
+function createAr(archivePath, filePaths) {
+  const chunks = [Buffer.from(AR_MAGIC, 'ascii')];
+
+  for (const filePath of filePaths) {
+    const filename = path.basename(filePath);
+    const stat = fs.statSync(filePath);
+    const fileContent = fs.readFileSync(filePath);
+
+    // Header structure (60 bytes total):
+    // 0..15: File identifier (16 bytes, space padded, ending with /)
+    // 16..27: File modification timestamp (12 bytes, decimal)
+    // 28..33: Owner ID (6 bytes, decimal)
+    // 34..39: Group ID (6 bytes, decimal)
+    // 40..47: File mode (8 bytes, octal)
+    // 48..57: File size in bytes (10 bytes, decimal)
+    // 58..59: Ending characters (2 bytes: `\x60\n`)
+
+    const header = Buffer.alloc(60);
+    const identifier = padRight(filename + '/', 16);
+    const mtime = padRight(Math.floor(stat.mtimeMs / 1000), 12);
+    const uid = padRight(stat.uid || 0, 6);
+    const gid = padRight(stat.gid || 0, 6);
+    const mode = padRight((stat.mode & 0o7777).toString(8), 8);
+    const size = padRight(fileContent.length, 10);
+    const trailer = '`\n';
+
+    header.write(identifier, 0, 16, 'ascii');
+    header.write(mtime, 16, 12, 'ascii');
+    header.write(uid, 28, 6, 'ascii');
+    header.write(gid, 34, 6, 'ascii');
+    header.write(mode, 40, 8, 'ascii');
+    header.write(size, 48, 10, 'ascii');
+    header.write(trailer, 58, 2, 'ascii');
+
+    chunks.push(header);
+    chunks.push(fileContent);
+
+    // Each member is padded with '\n' to an even byte boundary
+    if (fileContent.length % 2 !== 0) {
+      chunks.push(Buffer.from('\n', 'ascii'));
+    }
+  }
+
+  fs.writeFileSync(archivePath, Buffer.concat(chunks));
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  if (args.length === 0) {
+    console.error('Usage: ar -r <archive> <files...>');
+    process.exit(1);
+  }
+
+  // Parse flags
+  let flagIdx = 0;
+  while (flagIdx < args.length && args[flagIdx].startsWith('-')) {
+    flagIdx++;
+  }
+
+  const archivePath = args[flagIdx];
+  const filePaths = args.slice(flagIdx + 1);
+
+  if (!archivePath) {
+    console.error('Error: No archive specified');
+    process.exit(1);
+  }
+
+  try {
+    createAr(archivePath, filePaths);
+    process.exit(0);
+  } catch (err) {
+    console.error('ar error:', err);
+    process.exit(1);
+  }
+}
+
+main();
