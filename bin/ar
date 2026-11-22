@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
  * Pure Node.js drop-in replacement for `ar`
- * Implements the standard GNU/BSD Unix `ar` archive utility used to assemble Debian packages (.deb)
- * Supports:
- *   ar -r[flags] <archive.a/deb> <file1> <file2> ...
+ * Implements standard Unix `ar` archive creation used by `fpm` to assemble Debian packages (.deb).
+ * Supports both dashed and undashed operation flags (e.g. `ar -qc`, `ar qc`, `ar -r`, `ar rcs`).
  */
 
 import fs from 'node:fs';
@@ -28,20 +27,19 @@ function createAr(archivePath, filePaths) {
     const fileContent = fs.readFileSync(filePath);
 
     // Header structure (60 bytes total):
-    // 0..15: File identifier (16 bytes, space padded, ending with /)
+    // 0..15:  File identifier (16 bytes, space-padded)
     // 16..27: File modification timestamp (12 bytes, decimal)
     // 28..33: Owner ID (6 bytes, decimal)
     // 34..39: Group ID (6 bytes, decimal)
     // 40..47: File mode (8 bytes, octal)
     // 48..57: File size in bytes (10 bytes, decimal)
     // 58..59: Ending characters (2 bytes: `\x60\n`)
-
     const header = Buffer.alloc(60);
-    const identifier = padRight(filename + '/', 16);
+    const identifier = padRight(filename, 16);
     const mtime = padRight(Math.floor(stat.mtimeMs / 1000), 12);
-    const uid = padRight(stat.uid || 0, 6);
-    const gid = padRight(stat.gid || 0, 6);
-    const mode = padRight((stat.mode & 0o7777).toString(8), 8);
+    const uid = padRight(0, 6);
+    const gid = padRight(0, 6);
+    const mode = padRight('100' + (stat.mode & 0o777).toString(8).padStart(3, '0'), 8);
     const size = padRight(fileContent.length, 10);
     const trailer = '`\n';
 
@@ -68,18 +66,21 @@ function createAr(archivePath, filePaths) {
 function main() {
   const args = process.argv.slice(2);
   if (args.length === 0) {
-    console.error('Usage: ar -r <archive> <files...>');
+    console.error('Usage: ar <flags> <archive> <files...>');
     process.exit(1);
   }
 
-  // Parse flags
-  let flagIdx = 0;
-  while (flagIdx < args.length && args[flagIdx].startsWith('-')) {
-    flagIdx++;
+  // First argument is operation/modifier flags (with or without leading '-')
+  let idx = 0;
+  if (args[idx] && (/^-/.test(args[idx]) || /^[rcqtsuxdpmabivVPloUf]+$/.test(args[idx]))) {
+    idx++;
+  }
+  while (idx < args.length && args[idx].startsWith('-')) {
+    idx++;
   }
 
-  const archivePath = args[flagIdx];
-  const filePaths = args.slice(flagIdx + 1);
+  const archivePath = args[idx];
+  const filePaths = args.slice(idx + 1);
 
   if (!archivePath) {
     console.error('Error: No archive specified');

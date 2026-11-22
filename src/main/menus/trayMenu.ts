@@ -1,4 +1,5 @@
 import { app, Menu, nativeImage, NativeImage, Tray } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { MenuAction } from '../../shared/types';
@@ -8,15 +9,24 @@ import { getMainWindow } from '../windows/mainWindow';
 
 let tray: Tray | null = null;
 
+function resolveTrayIconPath(): string | undefined {
+  const candidates = [
+    path.join(__dirname, '../dist/tray-icon.png'),
+    path.join(__dirname, '../public/tray-icon.png'),
+    path.join(__dirname, '../dist/icon.png'),
+    path.join(__dirname, '../public/icon.png')
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 export function setupSystemTray(): Tray | null {
   try {
-    // Generate a clean native icon representation for the tray
-    // 16x16 or 24x24 icon
-    const iconPath = path.join(__dirname, '../public/favicon.ico');
+    // Load native PNG icon representation for the tray
+    const iconPath = resolveTrayIconPath();
     let trayIcon: NativeImage;
 
     try {
-      trayIcon = nativeImage.createFromPath(iconPath);
+      trayIcon = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
       if (trayIcon.isEmpty()) {
         trayIcon = nativeImage.createEmpty();
       }

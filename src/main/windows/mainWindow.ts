@@ -1,4 +1,5 @@
 import { BrowserWindow, app, shell } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { IPC_CHANNELS } from '../../shared/constants';
 import { WindowState } from '../../shared/types';
@@ -7,6 +8,15 @@ import { storeService } from '../services/storeService';
 
 let mainWindow: BrowserWindow | null = null;
 
+function resolveAppIconPath(): string | undefined {
+  const candidates = [
+    path.join(__dirname, '../dist/icon.png'),
+    path.join(__dirname, '../public/icon.png'),
+    path.join(__dirname, '../build/icon.png')
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
@@ -14,6 +24,7 @@ export function getMainWindow(): BrowserWindow | null {
 export function createMainWindow(): BrowserWindow {
   const savedState = storeService.getWindowState();
   const isDev = process.env.NODE_ENV !== 'production';
+  const appIconPath = resolveAppIconPath();
 
   const defaultWidth = 1100;
   const defaultHeight = 720;
@@ -30,6 +41,7 @@ export function createMainWindow(): BrowserWindow {
     frame: process.platform !== 'darwin', // Frameless on Windows/Linux for custom sleek titlebar, or standard with titlebar overlay
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     title: 'Cine Media Player',
+    ...(appIconPath ? { icon: appIconPath } : {}),
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

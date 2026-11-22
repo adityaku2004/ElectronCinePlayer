@@ -1,9 +1,10 @@
 {
   "name": "cine-media-player",
   "productName": "Cine Media Player",
-  "desktopName": "cine-media-player",
+  "desktopName": "Cine Media Player",
   "description": "A modern VLC-inspired desktop media player built with Electron.",
   "author": "Aditya Udai <adityaudai2004@gmail.com>",
+  "license": "MIT",
   "homepage": "https://github.com/adityaudai2004/cine-media-player",
   "private": true,
   "version": "0.0.0",
@@ -14,12 +15,12 @@
     "build:electron:main": "esbuild src/main/main.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist-electron/main.cjs --external:electron",
     "build:electron:preload": "esbuild src/preload/preload.ts --bundle --platform=node --format=cjs --target=node20 --outfile=dist-electron/preload.cjs --external:electron",
     "build:electron": "npm run build && npm run build:electron:main && npm run build:electron:preload",
-    "build:linux": "npm run build:electron && electron-builder --linux deb",
+    "build:linux": "npm run build:electron && electron-builder install-app-deps && PATH=\"$PATH:./bin\" electron-builder --linux deb",
     "electron": "electron dist-electron/main.cjs",
-    "dist": "npm run build:electron && electron-builder",
-    "dist:deb": "npm run build:electron && electron-builder --linux deb",
-    "dist:appimage": "npm run build:electron && electron-builder --linux AppImage",
-    "dist:linux": "npm run build:electron && electron-builder --linux deb AppImage tar.gz",
+    "dist": "npm run build:electron && electron-builder install-app-deps && electron-builder",
+    "dist:deb": "npm run build:linux",
+    "dist:appimage": "npm run build:electron && electron-builder install-app-deps && electron-builder --linux AppImage",
+    "dist:linux": "npm run build:electron && electron-builder install-app-deps && PATH=\"$PATH:./bin\" electron-builder --linux deb AppImage tar.gz",
     "dist:win": "npm run build:electron && electron-builder --win nsis",
     "dist:mac": "npm run build:electron && electron-builder --mac dmg",
     "preview": "vite preview",
@@ -32,8 +33,10 @@
     "productName": "Cine Media Player",
     "copyright": "Copyright © 2026 Cine Media Player Contributors",
     "artifactName": "${name}_${version}_${arch}.${ext}",
+    "npmRebuild": true,
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
@@ -49,6 +52,7 @@
       "category": "AudioVideo;Player;Video;",
       "syncDesktopName": true,
       "maintainer": "Aditya Udai <adityaudai2004@gmail.com>",
+      "vendor": "Aditya Udai <adityaudai2004@gmail.com>",
       "synopsis": "Next-Gen Cinematic Media Player Engine for Web & Desktop",
       "description": "A modern, high-performance, cinematic desktop media player with 10-band equalizer, audio boost, and universal subtitle engine.",
       "executableName": "cine-media-player"
@@ -59,10 +63,15 @@
       "compression": "gz",
       "packageCategory": "video",
       "depends": [
+        "libgtk-3-0",
         "libnotify4",
-        "libxtst6",
         "libnss3",
-        "libasound2",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0",
         "libgbm1"
       ]
     },
@@ -76,19 +85,18 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "lucide-react": "^0.546.0",
-    "react": "^19.0.1",
-    "react-dom": "^19.0.1",
-    "vite": "^6.2.3",
-    "express": "^4.21.2",
     "dotenv": "^17.2.3",
-    "motion": "^12.23.24"
+    "express": "^4.21.2",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
     "electron": "^43.4.1",
     "electron-builder": "^26.15.3",

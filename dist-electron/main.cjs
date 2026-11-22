@@ -366,6 +366,7 @@ function showNativeNotification(options) {
 
 // src/main/windows/mainWindow.ts
 var import_electron4 = require("electron");
+var import_fs2 = __toESM(require("fs"), 1);
 var import_path5 = __toESM(require("path"), 1);
 
 // src/main/services/storeService.ts
@@ -571,12 +572,21 @@ var storeService = new StoreService();
 
 // src/main/windows/mainWindow.ts
 var mainWindow = null;
+function resolveAppIconPath() {
+  const candidates = [
+    import_path5.default.join(__dirname, "../dist/icon.png"),
+    import_path5.default.join(__dirname, "../public/icon.png"),
+    import_path5.default.join(__dirname, "../build/icon.png")
+  ];
+  return candidates.find((candidate) => import_fs2.default.existsSync(candidate));
+}
 function getMainWindow() {
   return mainWindow;
 }
 function createMainWindow() {
   const savedState = storeService.getWindowState();
   const isDev2 = process.env.NODE_ENV !== "production";
+  const appIconPath = resolveAppIconPath();
   const defaultWidth = 1100;
   const defaultHeight = 720;
   mainWindow = new import_electron4.BrowserWindow({
@@ -593,6 +603,7 @@ function createMainWindow() {
     // Frameless on Windows/Linux for custom sleek titlebar, or standard with titlebar overlay
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     title: "Cine Media Player",
+    ...appIconPath ? { icon: appIconPath } : {},
     webPreferences: {
       preload: import_path5.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -1150,14 +1161,24 @@ function setupAppMenu() {
 
 // src/main/menus/trayMenu.ts
 var import_electron13 = require("electron");
+var import_fs3 = __toESM(require("fs"), 1);
 var import_path6 = __toESM(require("path"), 1);
 var tray = null;
+function resolveTrayIconPath() {
+  const candidates = [
+    import_path6.default.join(__dirname, "../dist/tray-icon.png"),
+    import_path6.default.join(__dirname, "../public/tray-icon.png"),
+    import_path6.default.join(__dirname, "../dist/icon.png"),
+    import_path6.default.join(__dirname, "../public/icon.png")
+  ];
+  return candidates.find((candidate) => import_fs3.default.existsSync(candidate));
+}
 function setupSystemTray() {
   try {
-    const iconPath = import_path6.default.join(__dirname, "../public/favicon.ico");
+    const iconPath = resolveTrayIconPath();
     let trayIcon;
     try {
-      trayIcon = import_electron13.nativeImage.createFromPath(iconPath);
+      trayIcon = iconPath ? import_electron13.nativeImage.createFromPath(iconPath) : import_electron13.nativeImage.createEmpty();
       if (trayIcon.isEmpty()) {
         trayIcon = import_electron13.nativeImage.createEmpty();
       }
